@@ -91,7 +91,34 @@ export default function ResumeBuilder({
   onResumeDataChange,
 }: ResumeBuilderProps) {
   const { user } = useUser();
-  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [resumeData, setResumeData] = useState<ResumeData>({
+    personalInfo: {
+      name: "",
+      phone: "",
+      email: "",
+      linkedin: "",
+      github: "",
+      location: "",
+    },
+    profile: "",
+    technicalSkills: {
+      languages: [],
+      frontend: [],
+      backend: [],
+      devTools: [],
+      other: [],
+    },
+    workExperience: [],
+    education: {
+      degree: "",
+      institution: "",
+      location: "",
+      graduationDate: "",
+      gpa: "",
+    },
+    projects: [],
+    achievements: [],
+  });
   const [isParsing, setIsParsing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isCalculatingATS, setIsCalculatingATS] = useState(false);
