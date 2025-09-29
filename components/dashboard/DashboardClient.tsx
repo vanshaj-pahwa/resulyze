@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { UserButton } from '@clerk/nextjs'
+import { useState, useCallback } from 'react'
+import { UserButton, SignedIn, SignedOut, SignInButton } from '@clerk/nextjs'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import JobDescriptionProcessor from '@/components/job/JobDescriptionProcessor'
@@ -17,6 +17,10 @@ import ConnectionStatus from '@/components/ui/connection-status'
 export default function DashboardClient() {
   const [jobData, setJobData] = useState<any>(null)
   const [resumeData, setResumeData] = useState<any>(null)
+
+  const handleResumeDataChange = useCallback((data: any) => {
+    setResumeData(data)
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -38,22 +42,29 @@ export default function DashboardClient() {
               <h1 className="text-lg md:text-xl font-bold text-gray-800">RESULYZE</h1>
             </div>
           </div>
-          <UserButton 
-            appearance={{
-              elements: {
-                avatarBox: "w-8 h-8",
-                userButtonPopoverCard: "bg-white/90 backdrop-blur-sm border-0 shadow-lg",
-                userButtonPopoverActionButton: "hover:bg-gray-100"
-              }
-            }}
-            userProfileProps={{
-              appearance: {
+          <SignedIn>
+            <UserButton 
+              appearance={{
                 elements: {
-                  card: "bg-white/90 backdrop-blur-sm"
+                  avatarBox: "w-8 h-8",
+                  userButtonPopoverCard: "bg-white/90 backdrop-blur-sm border-0 shadow-lg",
+                  userButtonPopoverActionButton: "hover:bg-gray-100"
                 }
-              }
-            }}
-          />
+              }}
+              userProfileProps={{
+                appearance: {
+                  elements: {
+                    card: "bg-white/90 backdrop-blur-sm"
+                  }
+                }
+              }}
+            />
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button variant="outline">Sign In</Button>
+            </SignInButton>
+          </SignedOut>
         </div>
       </header>
 
@@ -123,7 +134,7 @@ export default function DashboardClient() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResumeBuilder jobData={jobData} onResumeDataChange={setResumeData} />
+                <ResumeBuilder jobData={jobData} onResumeDataChange={handleResumeDataChange} />
               </CardContent>
             </Card>
           </TabsContent>

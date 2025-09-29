@@ -7,6 +7,10 @@ interface ResumePreviewProps {
 }
 
 export default function ResumePreview({ resumeData }: ResumePreviewProps) {
+  if (!resumeData) {
+    return <div>No resume data available.</div>
+  }
+  
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardContent className="p-8">
@@ -31,11 +35,21 @@ export default function ResumePreview({ resumeData }: ResumePreviewProps) {
           <div className="mb-4">
             <h2 className="text-sm font-bold mb-2">TECHNICAL SKILLS</h2>
             <div className="text-xs space-y-1">
-              <div><strong>Languages:</strong> {resumeData.technicalSkills.languages.join(', ')}</div>
-              <div><strong>Frontend Frameworks/Technologies:</strong> {resumeData.technicalSkills.frontend.join(', ')}</div>
-              <div><strong>Backend Technologies:</strong> {resumeData.technicalSkills.backend.join(', ')}</div>
-              <div><strong>Dev Tools:</strong> {resumeData.technicalSkills.devTools.join(', ')}</div>
-              <div><strong>Other:</strong> {resumeData.technicalSkills.other.join(', ')}</div>
+              {resumeData.technicalSkills.languages && resumeData.technicalSkills.languages.length > 0 && (
+                <div><strong>Languages:</strong> {resumeData.technicalSkills.languages.join(', ')}</div>
+              )}
+              {resumeData.technicalSkills.frontend && resumeData.technicalSkills.frontend.length > 0 && (
+                <div><strong>Frontend Frameworks/Technologies:</strong> {resumeData.technicalSkills.frontend.join(', ')}</div>
+              )}
+              {resumeData.technicalSkills.backend && resumeData.technicalSkills.backend.length > 0 && (
+                <div><strong>Backend Technologies:</strong> {resumeData.technicalSkills.backend.join(', ')}</div>
+              )}
+              {resumeData.technicalSkills.devTools && resumeData.technicalSkills.devTools.length > 0 && (
+                <div><strong>Dev Tools:</strong> {resumeData.technicalSkills.devTools.join(', ')}</div>
+              )}
+              {resumeData.technicalSkills.other && resumeData.technicalSkills.other.length > 0 && (
+                <div><strong>Other:</strong> {resumeData.technicalSkills.other.join(', ')}</div>
+              )}
             </div>
           </div>
 
@@ -84,7 +98,7 @@ export default function ResumePreview({ resumeData }: ResumePreviewProps) {
                   <div className="text-xs text-blue-600">{project.githubUrl}</div>
                 </div>
                 <ul className="text-xs space-y-1 ml-4">
-                  {project.achievements.map((achievement: string, achIndex: number) => (
+                  {project.achievements && project.achievements.map((achievement: string, achIndex: number) => (
                     <li key={achIndex} className="list-disc">{achievement}</li>
                   ))}
                 </ul>
