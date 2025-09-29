@@ -19,41 +19,19 @@ export async function POST(request: NextRequest) {
     const greeting = contactName ? `Hi ${contactName},` : "Hi there,";
 
     const prompt = `
-Write a professional referral message in FIRST PERSON that I (${
-      resumeData.personalInfo.name
-    }) can send to ${
-      contactName || "someone in my network"
-    } for a job opportunity.
+Write a short, professional referral request in FIRST PERSON that I (${resumeData.personalInfo.name}) can send to ${contactName || "a contact"} about the ${jobData.jobTitle} role at ${jobData.company}.
 
-Job Information:
-- Job Title: ${jobData.jobTitle}
-- Company: ${jobData.company}
-- Key Requirements: ${jobData.skills?.join(", ")}
-
-My Information:
-- Name: ${resumeData.personalInfo.name}
-- Current Role: ${resumeData.workExperience[0]?.title || "N/A"}
-- Key Skills: ${resumeData.technicalSkills.languages?.join(", ") || "N/A"}
-- Experience Summary: ${resumeData.profile || "N/A"}
-
-Contact Information:
-- Contact Name: ${contactName || "Not specified"}
-- Contact Email: ${contactEmail || "Not provided"}
-
-Requirements for the message:
-1. Start with "${greeting}"
-2. Introduce myself naturally (e.g., "My name is Vanshaj Pahwa, and I’m currently working as...")
-3. Mention the specific role and company I’m interested in
-4. Highlight relevant qualifications and experience
-5. Politely ask for referrals or connections
-6. Offer to provide more information if needed
-7. Suitable for direct email or LinkedIn
-8. Approx. 2-3 short paragraphs
-9. Tone: Professional, friendly, confident, grateful, and respectful
-10. Written in FIRST PERSON
-11. Personalized if contact name is provided
-
-Return only the referral message text without extra formatting or explanations.
+Key points to weave in naturally:
+- Who I am: ${resumeData.personalInfo.name}, ${resumeData.workExperience[0]?.title || "recent graduate"}.
+- The exact role + company I’m targeting.
+- 2–3 of my strongest, most relevant skills or achievements (pick from: ${resumeData.technicalSkills.languages?.slice(0, 3).join(", ")}, ${resumeData.profile?.slice(0, 150)}…).
+- A polite, direct ask: “Would you be open to referring me?” or “Could you forward my résumé to the hiring team?”
+- Offer to make it easy: attach résumé, job link, or quick blurb they can forward.
+- Thank them for their time; keep it to ~120–150 words total.
+- Tone: friendly, confident, grateful.
+- Start with “${greeting}” and end with “Best regards, ${resumeData.personalInfo.name}”.
+- Do NOT mention how long the contact has been at the company or any generic admiration lines.
+- Do NOT include subject lines, placeholders, or notes—only the message body.
 `;
 
     const result = await model.generateContent(prompt);
