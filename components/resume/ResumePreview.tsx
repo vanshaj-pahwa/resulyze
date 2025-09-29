@@ -187,13 +187,10 @@ export default function ResumePreview({ resumeData }: ResumePreviewProps) {
               <h2 className="text-sm font-bold mb-2">
                 ACHIEVEMENTS AND CERTIFICATIONS
               </h2>
-              <ul className="text-xs space-y-1">
+              <ul className="text-xs space-y-1 list-disc ml-4">
                 {resumeData.achievements.map(
                   (achievement: string, index: number) => (
-                    <li key={index}>
-                      <strong>{achievement.split(":")[0]}:</strong>{" "}
-                      {achievement.split(":").slice(1).join(":")}
-                    </li>
+                    <li key={index}>{achievement}</li>
                   )
                 )}
               </ul>

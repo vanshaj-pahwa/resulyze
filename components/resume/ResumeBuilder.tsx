@@ -504,7 +504,7 @@ export default function ResumeBuilder({
                 <CardContent className="space-y-4">
                   <Input
                     placeholder="Full Name"
-                    value={resumeData?.personalInfo.name}
+                    value={resumeData?.personalInfo?.name ?? ""}
                     onChange={(e) =>
                       setResumeData((prev) => ({
                         ...prev!,
