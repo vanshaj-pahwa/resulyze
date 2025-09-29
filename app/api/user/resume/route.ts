@@ -1,0 +1,64 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs'
+import { getStorageAdapter } from '@/lib/storage'
+
+export async function GET() {
+  try {
+    const { userId } = auth()
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const storage = await getStorageAdapter()
+    const resumeData = await storage.getResumeData(userId)
+    
+    return NextResponse.json(resumeData)
+  } catch (error) {
+    console.error('Error fetching resume data:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch resume data',
+        fallback: true // Indicate this is a fallback response
+      },
+      { status: 200 } // Return 200 to allow app to continue working
+    )
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { userId } = auth()
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const resumeData = await request.json()
+    
+    const storage = await getStorageAdapter()
+    const success = await storage.saveResumeData(userId, resumeData)
+
+    if (!success) {
+      return NextResponse.json(
+        { 
+          error: 'Failed to save resume data',
+          fallback: true
+        },
+        { status: 200 } // Return 200 to allow app to continue working
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error saving resume data:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to save resume data',
+        fallback: true,
+        message: 'Data saved locally only'
+      },
+      { status: 200 } // Return 200 to allow app to continue working
+    )
+  }
+}
