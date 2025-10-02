@@ -8,10 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, Upload, FileText } from 'lucide-react'
 
 interface JobDescriptionProcessorProps {
-  onJobDataExtracted: (data: any) => void
+  readonly onJobDataExtracted: (data: any) => void
 }
 
-export default function JobDescriptionProcessor({ onJobDataExtracted }: JobDescriptionProcessorProps) {
+export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly<JobDescriptionProcessorProps>) {
   const [jobDescription, setJobDescription] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [extractedData, setExtractedData] = useState<any>(null)
@@ -128,7 +128,7 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: JobDescr
                   <h4 className="font-semibold mb-2">Required Skills</h4>
                   <div className="flex flex-wrap gap-2">
                     {extractedData.skills.map((skill: string, index: number) => (
-                      <Badge key={index} variant="secondary">{skill}</Badge>
+                      <Badge key={`skill-${skill}-${index}`} variant="secondary">{skill}</Badge>
                     ))}
                   </div>
                 </div>
@@ -139,7 +139,7 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: JobDescr
                   <h4 className="font-semibold mb-2">Key Qualifications</h4>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
                     {extractedData.qualifications.map((qual: string, index: number) => (
-                      <li key={index}>{qual}</li>
+                      <li key={`qual-${index}-${qual.substring(0, 15)}`}>{qual}</li>
                     ))}
                   </ul>
                 </div>
@@ -150,13 +150,22 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: JobDescr
                   <h4 className="font-semibold mb-2">Important Keywords</h4>
                   <div className="flex flex-wrap gap-2">
                     {extractedData.keywords.map((keyword: string, index: number) => (
-                      <Badge key={index} variant="outline">{keyword}</Badge>
+                      <Badge key={`keyword-${keyword}-${index}`} variant="outline">{keyword}</Badge>
                     ))}
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
+          
+          <div className="flex justify-end mt-4">
+            <Button 
+              onClick={() => window.dispatchEvent(new CustomEvent('move-to-resume-optimization'))}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Optimize My Resume Based on This Analysis →
+            </Button>
+          </div>
         </div>
       )}
     </div>

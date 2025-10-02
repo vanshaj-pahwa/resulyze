@@ -5,59 +5,83 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, Target, MessageSquare, Zap } from 'lucide-react'
 
 interface DashboardStatsProps {
-  resumeData: any
-  jobData: any
+  readonly resumeData: any
+  readonly jobData: any
 }
 
-export default function DashboardStats({ resumeData, jobData }: DashboardStatsProps) {
+export default function DashboardStats({ resumeData, jobData }: Readonly<DashboardStatsProps>) {
   const [stats, setStats] = useState({
-    resumeCompleteness: 0,
-    atsScore: 0,
-    jobsAnalyzed: 0,
-    coverLettersGenerated: 0
+    jobStatus: 'Not started',
+    resumeStatus: 'Not started',
+    matchScore: 0,
+    atsScore: 0
   })
 
   useEffect(() => {
-    // Calculate resume completeness
-    let completeness = 0
-    if (resumeData?.personalInfo?.name) completeness += 20
-    if (resumeData?.profile) completeness += 20
-    if (resumeData?.workExperience?.length > 0) completeness += 20
-    if (resumeData?.technicalSkills?.languages?.length > 0) completeness += 20
-    if (resumeData?.education?.degree) completeness += 20
+    // Update job and resume status
+    let jobStatus = 'Not started'
+    let resumeStatus = 'Not started'
+    let atsScore = 0
 
-    setStats(prev => ({
-      ...prev,
-      resumeCompleteness: completeness,
-      jobsAnalyzed: jobData ? 1 : 0
-    }))
+    if (jobData) {
+      jobStatus = 'Analyzed'
+    }
+
+    if (resumeData) {
+      if (resumeData?.personalInfo?.name) {
+        resumeStatus = jobData ? 'Optimized' : 'Uploaded'
+      }
+      
+      // Calculate ATS score if available
+      if (resumeData?.atsScore) {
+        atsScore = resumeData.atsScore
+      }
+    }
+
+    // Calculate match score (simple algorithm)
+    let matchScore = 0
+    if (jobData && resumeData) {
+      // Simple calculation - can be replaced with a more sophisticated algorithm
+      const hasName = resumeData?.personalInfo?.name ? 25 : 0
+      const hasSkills = resumeData?.technicalSkills?.languages?.length > 0 ? 25 : 0
+      const hasExperience = resumeData?.workExperience?.length > 0 ? 25 : 0
+      const hasEducation = resumeData?.education?.degree ? 25 : 0
+      matchScore = hasName + hasSkills + hasExperience + hasEducation
+    }
+
+    setStats({
+      jobStatus,
+      resumeStatus,
+      matchScore,
+      atsScore
+    })
   }, [resumeData, jobData])
 
   const statCards = [
     {
-      title: 'Resume Completeness',
-      value: `${stats.resumeCompleteness}%`,
+      title: 'Job Description',
+      value: stats.jobStatus,
       icon: FileText,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
     {
-      title: 'Current ATS Score',
-      value: stats.atsScore > 0 ? `${stats.atsScore}/100` : 'Not calculated',
-      icon: Target,
+      title: 'Resume Status',
+      value: stats.resumeStatus,
+      icon: FileText,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
     {
-      title: 'Jobs Analyzed',
-      value: stats.jobsAnalyzed.toString(),
-      icon: MessageSquare,
+      title: 'ATS Score',
+      value: stats.atsScore > 0 ? `${stats.atsScore}/100` : 'Not calculated',
+      icon: Target,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
     },
     {
-      title: 'AI Optimizations',
-      value: '0',
+      title: 'Job Match',
+      value: stats.matchScore > 0 ? `${stats.matchScore}%` : 'Not calculated',
       icon: Zap,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100'
@@ -65,15 +89,15 @@ export default function DashboardStats({ resumeData, jobData }: DashboardStatsPr
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {statCards.map((stat, index) => (
-        <Card key={index} className="border-0 bg-white/60 backdrop-blur-sm shadow-lg">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {statCards.map((stat) => (
+        <Card key={stat.title} className="border border-gray-200 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-gray-700">
               {stat.title}
             </CardTitle>
-            <div className={`w-8 h-8 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
+            <div className={`w-10 h-10 ${stat.bgColor} rounded-full flex items-center justify-center`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
           </CardHeader>
           <CardContent>

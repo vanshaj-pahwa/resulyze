@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 interface InterviewPrepProps {
-  jobData: any
-  resumeData: any
+  readonly jobData: any
+  readonly resumeData: any
 }
 
 interface InterviewQuestion {
@@ -17,7 +17,7 @@ interface InterviewQuestion {
   tips: string[]
 }
 
-export default function InterviewPrep({ jobData, resumeData }: InterviewPrepProps) {
+export default function InterviewPrep({ jobData, resumeData }: Readonly<InterviewPrepProps>) {
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -80,7 +80,7 @@ export default function InterviewPrep({ jobData, resumeData }: InterviewPrepProp
       {questions.length > 0 && (
         <div className="space-y-4">
           {questions.map((item, index) => (
-            <Card key={index}>
+            <Card key={`question-${index}-${item.question?.substring(0, 15)}`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{item.question}</CardTitle>

@@ -8,12 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -21,25 +19,37 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import {
   Loader2,
   Download,
   Plus,
   Trash2,
   AlertCircle,
   Target,
-  Upload,
+  CheckCircle2,
+  XCircle,
+  Info,
 } from "lucide-react";
 import ResumePreview from "./ResumePreview";
 import ATSScore from "./ATSScore";
 
 interface ResumeBuilderProps {
-  jobData: any;
-  onResumeDataChange: (data: any) => void;
+  readonly jobData: any;
+  readonly onResumeDataChange: (data: any) => void;
 }
 
 interface WorkExperience {
   id: string;
-  title: string;
+  position: string; // Changed from title to position to match backend model
   company: string;
   location: string;
   startDate: string;
@@ -89,7 +99,7 @@ interface ResumeData {
 export default function ResumeBuilder({
   jobData,
   onResumeDataChange,
-}: ResumeBuilderProps) {
+}: Readonly<ResumeBuilderProps>) {
   const { user } = useUser();
   const [resumeData, setResumeData] = useState<ResumeData>({
     personalInfo: {
@@ -126,6 +136,50 @@ export default function ResumeBuilder({
   const [activeTab, setActiveTab] = useState("personal");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showUploadBanner, setShowUploadBanner] = useState(false);
+  
+  // Alert dialog states
+  const [alertInfo, setAlertInfo] = useState<{
+    open: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+    details?: string;
+    action?: string;
+  }>({
+    open: false,
+    type: 'info',
+    title: '',
+    message: '',
+    details: '',
+    action: ''
+  });
+  
+  // Helper function to show alert dialogs
+  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, details?: string) => {
+    const actionLabels = {
+      'success': 'Great!',
+      'error': 'Try Again',
+      'warning': 'Got it',
+      'info': 'OK'
+    };
+    
+    setAlertInfo({
+      open: true,
+      type,
+      title,
+      message,
+      details,
+      action: actionLabels[type]
+    });
+    
+    // Auto hide after 5 seconds for success messages only
+    if (type === 'success') {
+      setTimeout(() => {
+        setAlertInfo(prev => ({ ...prev, open: false }));
+      }, 5000);
+    }
+  };
 
   useEffect(() => {
     const loadResumeData = async () => {
@@ -136,12 +190,27 @@ export default function ResumeBuilder({
         if (response.ok) {
           const result = await response.json();
           if (result && !result.error) {
+            // Ensure each work experience has a unique ID
+            if (result.workExperience && Array.isArray(result.workExperience)) {
+              result.workExperience = result.workExperience.map((exp: any) => ({
+                ...exp,
+                id: exp.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
+              }));
+            }
             setResumeData(result);
           } else if (result.fallback) {
             try {
               const localData = localStorage.getItem(`resume_${user.id}`);
               if (localData) {
-                setResumeData(JSON.parse(localData));
+                const parsedData = JSON.parse(localData);
+                // Ensure each work experience has a unique ID
+                if (parsedData.workExperience && Array.isArray(parsedData.workExperience)) {
+                  parsedData.workExperience = parsedData.workExperience.map((exp: any) => ({
+                    ...exp,
+                    id: exp.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                  }));
+                }
+                setResumeData(parsedData);
               }
             } catch (localError) {
               console.error("Failed to load from localStorage:", localError);
@@ -154,7 +223,15 @@ export default function ResumeBuilder({
           try {
             const localData = localStorage.getItem(`resume_${user.id}`);
             if (localData) {
-              setResumeData(JSON.parse(localData));
+              const parsedData = JSON.parse(localData);
+              // Ensure each work experience has a unique ID
+              if (parsedData.workExperience && Array.isArray(parsedData.workExperience)) {
+                parsedData.workExperience = parsedData.workExperience.map((exp: any) => ({
+                  ...exp,
+                  id: exp.id || Date.now().toString() + Math.random().toString(36).substr(2, 9)
+                }));
+              }
+              setResumeData(parsedData);
             }
           } catch (localError) {
             console.error("Failed to load from localStorage:", localError);
@@ -162,6 +239,23 @@ export default function ResumeBuilder({
         }
       } finally {
         setIsLoading(false);
+        
+        // Check if we should show the upload banner (no resume data yet)
+        if (user) {
+          try {
+            const hasSeenUploadBanner = localStorage.getItem(`upload_banner_seen_${user.id}`);
+            if (!hasSeenUploadBanner) {
+              setShowUploadBanner(true);
+              // Mark as seen after 10 seconds
+              setTimeout(() => {
+                localStorage.setItem(`upload_banner_seen_${user.id}`, 'true');
+                setShowUploadBanner(false);
+              }, 10000);
+            }
+          } catch (error) {
+            console.error("Error checking local storage:", error);
+          }
+        }
       }
     };
 
@@ -187,21 +281,41 @@ export default function ResumeBuilder({
             "Using fallback storage:",
             result.message || "Data saved locally"
           );
+          
+          // Store in localStorage as fallback
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem(`resume_${user.id}`, JSON.stringify(data));
+            } catch (localError) {
+              console.error("Failed to save to localStorage:", localError);
+              showAlert('warning', 'Partial Save', 'Your resume was saved locally but not to the cloud.', 'Changes may not persist across devices.');
+            }
+          }
+        } else if (result.success) {
+          // Only show save success alert for manual saves, not auto-saves
+          // We don't want to display this every time auto-save happens
+          if (data !== resumeData) {
+            showAlert('success', 'Resume Saved', 'Your resume has been saved successfully.');
+          }
         }
       } catch (error) {
         console.error("Error saving resume data:", error);
+        
+        // Attempt localStorage fallback
         if (typeof window !== "undefined") {
           try {
             localStorage.setItem(`resume_${user.id}`, JSON.stringify(data));
+            showAlert('warning', 'Offline Save', 'Your resume was saved locally.', 'Changes may not be accessible from other devices until you reconnect.');
           } catch (localError) {
             console.error("Failed to save to localStorage:", localError);
+            showAlert('error', 'Save Failed', 'Failed to save your resume.', 'Please check your internet connection and try again.');
           }
         }
       } finally {
         setIsSaving(false);
       }
     },
-    [user, isLoading]
+    [user, isLoading, resumeData]
   );
 
   useEffect(() => {
@@ -225,7 +339,7 @@ export default function ResumeBuilder({
   }
 
   const getMissingRequirements = () => {
-    const missing = [];
+    const missing: string[] = [];
     if (!jobData) missing.push("Job Description Analysis");
     return missing;
   };
@@ -238,7 +352,7 @@ export default function ResumeBuilder({
 
   const optimizeResume = async () => {
     if (!jobData) {
-      alert("Please analyze a job description first");
+      showAlert('warning', 'Job Analysis Required', 'Please analyze a job description first.');
       return;
     }
 
@@ -250,10 +364,33 @@ export default function ResumeBuilder({
         body: JSON.stringify({ resumeData, jobData }),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const optimizedData = await response.json();
+      
+      // Save the optimized resume to the database
+      await saveResumeData(optimizedData);
+      
+      // Update the state
       setResumeData(optimizedData);
+      
+      // Show success message
+      showAlert(
+        'success',
+        'Resume Optimized!',
+        'Your resume has been optimized for the job description and saved.',
+        'The resume now better highlights relevant skills and experience for the target position.'
+      );
     } catch (error) {
       console.error("Error optimizing resume:", error);
+      showAlert(
+        'error',
+        'Optimization Failed',
+        'Failed to optimize your resume.',
+        'Please try again or optimize manually based on the job description.'
+      );
     } finally {
       setIsOptimizing(false);
     }
@@ -261,7 +398,7 @@ export default function ResumeBuilder({
 
   const calculateATSScore = async () => {
     if (!jobData || !resumeData) {
-      alert("Please complete job analysis and resume first");
+      showAlert('warning', 'Missing Information', 'Please complete job analysis and resume first.');
       return;
     }
 
@@ -279,10 +416,32 @@ export default function ResumeBuilder({
 
       const data = await response.json();
 
+      console.log('data:', data);
+
       if (data.error) {
         setAtsData({ error: data.error });
+        showAlert('error', 'ATS Score Calculation Failed', data.error);
       } else {
         setAtsData(data);
+        
+        // Show success alert with score information
+        const score = data.overallScore || 0;
+        let scoreMessage = '';
+        
+        if (score >= 80) {
+          scoreMessage = 'Excellent match! Your resume is well optimized for this job.';
+        } else if (score >= 60) {
+          scoreMessage = 'Good match. Consider making minor improvements to your resume.';
+        } else {
+          scoreMessage = 'Your resume may need significant improvements to pass ATS systems.';
+        }
+        
+        showAlert(
+          'success',
+          'ATS Score Calculated',
+          scoreMessage,
+          `Score: ${score}/100. See the ATS Score tab for detailed feedback.`
+        );
       }
 
       setActiveTab("ats-score");
@@ -292,6 +451,7 @@ export default function ResumeBuilder({
         error:
           "The AI service is currently unavailable. Please try again in a few moments.",
       });
+      showAlert('error', 'ATS Score Calculation Failed', 'The AI service is currently unavailable.', 'Please try again in a few moments.');
       setActiveTab("ats-score");
     } finally {
       setIsCalculatingATS(false);
@@ -306,9 +466,12 @@ export default function ResumeBuilder({
   };
 
   const addWorkExperience = () => {
+    // Generate a more robust unique ID by combining timestamp and random string
+    const uniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    
     const newExp: WorkExperience = {
-      id: Date.now().toString(),
-      title: "",
+      id: uniqueId,
+      position: "",
       company: "",
       location: "",
       startDate: "",
@@ -327,17 +490,31 @@ export default function ResumeBuilder({
     field: keyof WorkExperience,
     value: any
   ) => {
-    setResumeData((prev) => ({
-      ...prev!,
-      workExperience: prev!.workExperience.map((exp) =>
-        exp.id === id ? { ...exp, [field]: value } : exp
-      ),
-    }));
+    console.log(`Updating work experience ${id}, field: ${field}, value: ${value}`);
+    
+    setResumeData((prev) => {
+      // Make sure each work experience has a unique id
+      const updatedWorkExperiences = prev!.workExperience.map((exp) => {
+        if (exp.id === id) {
+          console.log(`Found match for ID: ${id}`);
+          return { ...exp, [field]: value };
+        }
+        return exp;
+      });
+      
+      return {
+        ...prev!,
+        workExperience: updatedWorkExperiences,
+      };
+    });
   };
 
   const addProject = () => {
+    // Generate a more robust unique ID by combining timestamp and random string
+    const uniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    
     const newProject: Project = {
-      id: Date.now().toString(),
+      id: uniqueId,
       name: "",
       technologies: "",
       description: "",
@@ -349,13 +526,187 @@ export default function ResumeBuilder({
     }));
   };
 
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    
+    const file = e.target.files[0];
+    
+    // Validate file type
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    if (!fileExt || !['pdf', 'docx'].includes(fileExt)) {
+      showAlert('error', 'Invalid File Type', 'Please upload a PDF or DOCX file.');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append("resumeFile", file);
+    
+    // Show loading state
+    setIsParsing(true);
+    
+    try {
+      // We no longer need to confirm - we'll just replace and save the previous version automatically
+      // This simplifies the flow and we'll handle it in the backend
+      
+      // Add a timeout to prevent hanging on large files
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
+      let response;
+      try {
+        response = await fetch("/api/parse-resume", {
+          method: "POST",
+          body: formData,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        console.error("Error uploading resume:", fetchError);
+        showAlert('error', 'Upload Failed', 'Failed to upload resume.', 'Please try again with a smaller file or different format.');
+        setIsParsing(false);
+        return;
+      }
+        
+      
+      if (response.ok) {
+        const parsedData = await response.json();
+        
+        // Validate and ensure data structure is complete
+        const validatedData = {
+          ...resumeData, // Start with current data as base
+          ...parsedData,  // Merge with parsed data
+          personalInfo: {
+            ...resumeData.personalInfo,
+            ...parsedData.personalInfo || {},
+          },
+          technicalSkills: {
+            ...resumeData.technicalSkills,
+            ...parsedData.technicalSkills || {},
+            languages: parsedData.technicalSkills?.languages || [],
+            frontend: parsedData.technicalSkills?.frontend || [],
+            backend: parsedData.technicalSkills?.backend || [],
+            devTools: parsedData.technicalSkills?.devTools || [],
+            other: parsedData.technicalSkills?.other || [],
+          },
+        };
+        
+        // Ensure work experience array exists and has unique IDs
+        if (parsedData.workExperience && Array.isArray(parsedData.workExperience)) {
+          validatedData.workExperience = parsedData.workExperience.map((exp: any) => ({
+            position: exp.position || "",
+            company: exp.company || "",
+            location: exp.location || "",
+            startDate: exp.startDate || "",
+            endDate: exp.endDate || "",
+            current: exp.current || false,
+            achievements: Array.isArray(exp.achievements) ? exp.achievements : [],
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+          }));
+        }
+        
+        // Ensure projects array exists and has unique IDs
+        if (parsedData.projects && Array.isArray(parsedData.projects)) {
+          validatedData.projects = parsedData.projects.map((proj: any) => ({
+            name: proj.name || "",
+            description: proj.description || "",
+            technologies: Array.isArray(proj.technologies) ? proj.technologies : 
+              (typeof proj.technologies === 'string' ? proj.technologies : ""),
+            achievements: Array.isArray(proj.achievements) ? proj.achievements : [],
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+          }));
+        }
+        
+        // Update achievements format if needed
+        if (parsedData.achievements && Array.isArray(parsedData.achievements)) {
+          // Filter out empty achievements
+          validatedData.achievements = parsedData.achievements
+            .filter((ach: string) => ach && ach.trim().length > 0);
+        }
+        
+        // Set the validated data
+        setResumeData(validatedData);
+        
+        // Show success message with extracted info
+        const extractedFields = [
+          validatedData.personalInfo?.name && `Name: ${validatedData.personalInfo.name}`,
+          validatedData.workExperience?.length > 0 && `Work Experience: ${validatedData.workExperience.length} entries`,
+          validatedData.education?.degree && `Education: ${validatedData.education.degree}`,
+          validatedData.technicalSkills?.languages?.length > 0 && `Skills: ${validatedData.technicalSkills.languages.length} languages found`
+        ].filter(Boolean).join('\n');
+        
+        // Save the parsed resume data to the database
+        await saveResumeData(validatedData);
+        
+        // Check if there was a warning message
+        if (parsedData.warning) {
+          showAlert(
+            'warning', 
+            'Resume Parsed with Limited Information', 
+            parsedData.warning, 
+            'We\'ve populated the form with sample data. Please review and edit as needed.'
+          );
+        } else {
+          showAlert(
+            'success', 
+            'Resume Parsed Successfully!', 
+            'Your resume has been parsed and saved.', 
+            `Extracted information includes:\n${extractedFields}`
+          );
+        }
+      } else {
+        const errorData = await response.json();
+        
+        // Show detailed error with suggestions if available
+        if (errorData.suggestions && Array.isArray(errorData.suggestions)) {
+          showAlert(
+            'error', 
+            'Resume Parsing Failed', 
+            errorData.error || 'Unknown error', 
+            `Suggestions:\n${errorData.suggestions.join('\n')}`
+          );
+        } else {
+          showAlert(
+            'error', 
+            'Resume Parsing Failed', 
+            errorData.error || 'Unknown error'
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      showAlert(
+        'error', 
+        'Resume Parsing Failed', 
+        'Failed to parse resume.', 
+        'Please try again or enter details manually.'
+      );
+    } finally {
+      setIsParsing(false);
+      // Reset file input
+      if (e.target) {
+        e.target.value = '';
+      }
+    }
+  };
+
   const downloadResume = async (format: "pdf" | "docx") => {
     try {
+      // Show loading alert
+      showAlert('info', 'Preparing Download', `Generating your ${format.toUpperCase()} resume...`);
+      
       const response = await fetch("/api/download-resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeData, format }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -366,17 +717,96 @@ export default function ResumeBuilder({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      // Show success alert
+      showAlert('success', 'Download Started', `Your ${format.toUpperCase()} resume is downloading.`);
     } catch (error) {
       console.error("Error downloading resume:", error);
+      showAlert('error', 'Download Failed', `Failed to generate ${format.toUpperCase()} resume.`, 'Please try again or check your resume data for completeness.');
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Alert Dialog */}
+      <AlertDialog open={alertInfo.open} onOpenChange={(open: boolean) => setAlertInfo(prev => ({ ...prev, open }))}>
+        <AlertDialogContent type={alertInfo.type}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertInfo.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              <p>{alertInfo.message}</p>
+              {alertInfo.details && (
+                <div className="mt-2 text-sm whitespace-pre-line">
+                  {alertInfo.details}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex justify-end space-x-2">
+            <AlertDialogCancel className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+              Cancel
+            </AlertDialogCancel>
+            {alertInfo.action && (
+              <AlertDialogAction
+                className={
+                  alertInfo.type === 'success' ? 'px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700' :
+                  alertInfo.type === 'error' ? 'px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700' :
+                  alertInfo.type === 'warning' ? 'px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700' :
+                  'px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700'
+                }
+              >
+                {alertInfo.action}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isSaving && (
         <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
           <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
           <span className="text-sm text-blue-700">Saving changes...</span>
+        </div>
+      )}
+
+      {isParsing && (
+        <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          <span className="text-sm text-blue-700">Parsing resume...</span>
+        </div>
+      )}
+      
+      {showUploadBanner && !resumeData?.personalInfo?.name && (
+        <div className="flex items-center justify-between gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-green-600" />
+            <span className="text-sm text-green-700">
+              <strong>Pro tip:</strong> Save time by uploading your existing resume in PDF or DOCX format!
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="text-green-700 border-green-300 hover:bg-green-100"
+              onClick={() => document.getElementById("resume-upload")?.click()}
+            >
+              Upload Now
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                setShowUploadBanner(false);
+                if (user) {
+                  localStorage.setItem(`upload_banner_seen_${user.id}`, 'true');
+                }
+              }}
+            >
+              &times;
+            </Button>
+          </div>
         </div>
       )}
 
@@ -391,6 +821,31 @@ export default function ResumeBuilder({
 
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
         <div className="flex flex-col sm:flex-row gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex gap-2 items-center"
+                  onClick={() => document.getElementById("resume-upload")?.click()}
+                >
+                  <input
+                    id="resume-upload"
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={handleResumeUpload}
+                    className="hidden"
+                  />
+                  <Plus className="w-4 h-4" />
+                  {resumeData?.personalInfo?.name ? "Replace Resume" : "Upload Resume"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload a PDF or DOCX resume to automatically fill the form</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -618,9 +1073,9 @@ export default function ResumeBuilder({
                     <div className="grid grid-cols-2 gap-4">
                       <Input
                         placeholder="Job Title"
-                        value={exp.title}
+                        value={exp.position}
                         onChange={(e) =>
-                          updateWorkExperience(exp.id, "title", e.target.value)
+                          updateWorkExperience(exp.id, "position", e.target.value)
                         }
                       />
                       <Input

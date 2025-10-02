@@ -9,13 +9,13 @@ import { CheckCircle, AlertTriangle, Target, TrendingUp, X, Check, Clock, Eye, B
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ATSScoreProps {
-    jobData: any
-    resumeData: any
-    atsData: any
-    onImproveWithAI: () => void
+    readonly jobData: any
+    readonly resumeData: any
+    readonly atsData: any
+    readonly onImproveWithAI: () => void
 }
 
-export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI }: ATSScoreProps) {
+export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI }: Readonly<ATSScoreProps>) {
     const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
 
     const getScoreColor = (score: number) => {
@@ -168,7 +168,7 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                             <CardContent>
                                 <div className="space-y-3 mb-4">
                                     {atsData.atsCompatibility.checks?.map((check: any, index: number) => (
-                                        <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                                        <div key={`ats-check-${check.item}-${index}`} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
                                             {getATSIcon(check.status)}
                                             <span className="flex-1 text-sm">{check.item}</span>
                                             <Badge 
@@ -235,7 +235,7 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                         </h4>
                                         <div className="flex flex-wrap gap-2">
                                             {atsData.keywordAnalysis.matchedSkills.map((skill: string, index: number) => (
-                                                <Badge key={index} className="bg-green-100 text-green-800">
+                                                <Badge key={`matched-skill-${skill}-${index}`} className="bg-green-100 text-green-800">
                                                     {skill}
                                                 </Badge>
                                             ))}
@@ -251,7 +251,7 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                         </h4>
                                         <div className="flex flex-wrap gap-2">
                                             {atsData.keywordAnalysis.missingSkills.slice(0, 10).map((skill: string, index: number) => (
-                                                <Badge key={index} variant="outline" className="border-red-300 text-red-700">
+                                                <Badge key={`missing-skill-${skill}-${index}`} variant="outline" className="border-red-300 text-red-700">
                                                     {skill}
                                                 </Badge>
                                             ))}
@@ -282,7 +282,7 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                             <CardContent>
                                 <div className="space-y-3">
                                     {atsData.improvementChecklist.map((item: string, index: number) => (
-                                        <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div key={`checklist-${index}-${item.substring(0, 15)}`} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                                             <button
                                                 onClick={() => toggleCheckItem(index)}
                                                 className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${

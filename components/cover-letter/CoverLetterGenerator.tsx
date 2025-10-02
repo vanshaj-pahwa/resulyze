@@ -10,11 +10,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Loader2, Copy, Download, Mail, AlertCircle } from 'lucide-react'
 
 interface CoverLetterGeneratorProps {
-  jobData: any
-  resumeData: any
+  readonly jobData: any
+  readonly resumeData: any
 }
 
-export default function CoverLetterGenerator({ jobData, resumeData }: CoverLetterGeneratorProps) {
+export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<CoverLetterGeneratorProps>) {
   const [coverLetter, setCoverLetter] = useState('')
   const [referralMessage, setReferralMessage] = useState('')
   const [contactName, setContactName] = useState('')

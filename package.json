@@ -11,6 +11,7 @@
   "dependencies": {
     "@clerk/nextjs": "^4.29.1",
     "@google/generative-ai": "^0.2.1",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-select": "^2.0.0",
@@ -24,7 +25,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.294.0",
-    "mammoth": "^1.6.0",
+    "mammoth": "^1.11.0",
     "mongodb": "^6.3.0",
     "mongoose": "^8.0.3",
     "next": "14.0.4",

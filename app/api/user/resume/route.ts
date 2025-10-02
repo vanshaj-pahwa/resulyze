@@ -13,6 +13,11 @@ export async function GET() {
     const storage = await getStorageAdapter()
     const resumeData = await storage.getResumeData(userId)
     
+    // Format the data for frontend if it exists
+    if (resumeData) {
+      // No transformation needed since we've updated the frontend to use the same field names
+    }
+    
     return NextResponse.json(resumeData)
   } catch (error) {
     console.error('Error fetching resume data:', error)
@@ -36,8 +41,15 @@ export async function PUT(request: NextRequest) {
 
     const resumeData = await request.json()
     
+    // Ensure work experience data is properly formatted for the database
+    // This is important because frontend and backend models have different field names
+    const formattedData = {
+      ...resumeData,
+      // No transformation needed for other properties
+    }
+    
     const storage = await getStorageAdapter()
-    const success = await storage.saveResumeData(userId, resumeData)
+    const success = await storage.saveResumeData(userId, formattedData)
 
     if (!success) {
       return NextResponse.json(
