@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import ResumePreview from "./ResumePreview";
 import ATSScore from "./ATSScore";
+import ResumeTabsNav from "./ResumeTabsNav";
 
 interface ResumeBuilderProps {
   readonly jobData: any;
@@ -819,14 +820,16 @@ export default function ResumeBuilder({
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-        <div className="flex flex-col sm:flex-row gap-2">
+      {/* Button section with responsive layout */}
+      <div className="flex flex-col gap-3 sm:hidden">
+        {/* Mobile view - stacked buttons */}
+        <div className="flex justify-center">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
-                  className="flex gap-2 items-center"
+                  className="w-full max-w-[320px] flex items-center justify-center h-10"
                   onClick={() => document.getElementById("resume-upload")?.click()}
                 >
                   <input
@@ -836,8 +839,119 @@ export default function ResumeBuilder({
                     onChange={handleResumeUpload}
                     className="hidden"
                   />
-                  <Plus className="w-4 h-4" />
-                  {resumeData?.personalInfo?.name ? "Replace Resume" : "Upload Resume"}
+                  <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{resumeData?.personalInfo?.name ? "Replace Resume" : "Upload Resume"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload a PDF or DOCX resume to automatically fill the form</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
+        <div className="flex justify-center">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="w-full max-w-[320px] h-10"
+                  onClick={optimizeResume}
+                  disabled={isOptimizing || !jobData}
+                >
+                  {isOptimizing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 flex-shrink-0 animate-spin" />
+                      <span className="whitespace-nowrap">Optimizing...</span>
+                    </>
+                  ) : (
+                    <span className="whitespace-nowrap">AI Optimize Resume</span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              {!jobData && (
+                <TooltipContent>
+                  <p>{getTooltipMessage()}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div className="flex justify-center">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={calculateATSScore}
+                  disabled={isCalculatingATS || !jobData || !resumeData}
+                  variant="outline"
+                  className="w-full max-w-[320px] h-10 flex items-center justify-center"
+                >
+                  {isCalculatingATS ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 flex-shrink-0 animate-spin" />
+                      <span className="whitespace-nowrap">Calculating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Target className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Calculate ATS Score</span>
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              {!jobData && (
+                <TooltipContent>
+                  <p>{getTooltipMessage()}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
+        <div className="flex justify-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => downloadResume("pdf")} 
+            className="w-36 flex items-center justify-center h-10 px-2"
+            size="sm"
+          >
+            <Download className="w-4 h-4 mr-1 flex-shrink-0" />
+            <span className="whitespace-nowrap text-sm">Download PDF</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => downloadResume("docx")} 
+            className="w-36 flex items-center justify-center h-10 px-2"
+            size="sm"
+          >
+            <Download className="w-4 h-4 mr-1 flex-shrink-0" />
+            <span className="whitespace-nowrap text-sm">Download DOCX</span>
+          </Button>
+        </div>
+      </div>
+      
+      {/* Desktop view - inline buttons with left and right aligned groups */}
+      <div className="hidden sm:flex sm:justify-between sm:items-center sm:mb-4">
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex items-center h-10"
+                  onClick={() => document.getElementById("resume-upload-desktop")?.click()}
+                >
+                  <input
+                    id="resume-upload-desktop"
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={handleResumeUpload}
+                    className="hidden"
+                  />
+                  <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{resumeData?.personalInfo?.name ? "Replace Resume" : "Upload Resume"}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -849,21 +963,20 @@ export default function ResumeBuilder({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div>
-                  <Button
-                    onClick={optimizeResume}
-                    disabled={isOptimizing || !jobData}
-                  >
-                    {isOptimizing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Optimizing...
-                      </>
-                    ) : (
-                      "AI Optimize Resume"
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  className="h-10"
+                  onClick={optimizeResume}
+                  disabled={isOptimizing || !jobData}
+                >
+                  {isOptimizing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 flex-shrink-0 animate-spin" />
+                      <span className="whitespace-nowrap">Optimizing...</span>
+                    </>
+                  ) : (
+                    <span className="whitespace-nowrap">AI Optimize Resume</span>
+                  )}
+                </Button>
               </TooltipTrigger>
               {!jobData && (
                 <TooltipContent>
@@ -872,29 +985,28 @@ export default function ResumeBuilder({
               )}
             </Tooltip>
           </TooltipProvider>
-
+          
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div>
-                  <Button
-                    onClick={calculateATSScore}
-                    disabled={isCalculatingATS || !jobData || !resumeData}
-                    variant="outline"
-                  >
-                    {isCalculatingATS ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Calculating...
-                      </>
-                    ) : (
-                      <>
-                        <Target className="w-4 h-4 mr-2" />
-                        Calculate ATS Score
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  onClick={calculateATSScore}
+                  disabled={isCalculatingATS || !jobData || !resumeData}
+                  variant="outline"
+                  className="h-10 flex items-center justify-center"
+                >
+                  {isCalculatingATS ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 flex-shrink-0 animate-spin" />
+                      <span className="whitespace-nowrap">Calculating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Target className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Calculate ATS Score</span>
+                    </>
+                  )}
+                </Button>
               </TooltipTrigger>
               {!jobData && (
                 <TooltipContent>
@@ -904,14 +1016,25 @@ export default function ResumeBuilder({
             </Tooltip>
           </TooltipProvider>
         </div>
+        
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => downloadResume("pdf")}>
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
+          <Button 
+            variant="outline" 
+            onClick={() => downloadResume("pdf")} 
+            className="flex items-center h-10"
+            size="sm"
+          >
+            <Download className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="whitespace-nowrap">Download PDF</span>
           </Button>
-          <Button variant="outline" onClick={() => downloadResume("docx")}>
-            <Download className="w-4 h-4 mr-2" />
-            Download DOCX
+          <Button 
+            variant="outline" 
+            onClick={() => downloadResume("docx")} 
+            className="flex items-center h-10"
+            size="sm"
+          >
+            <Download className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="whitespace-nowrap">Download DOCX</span>
           </Button>
         </div>
       </div>
@@ -923,33 +1046,12 @@ export default function ResumeBuilder({
             onValueChange={setActiveTab}
             className="space-y-4"
           >
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-              <TabsTrigger value="personal" className="text-xs sm:text-sm">
-                <span className="hidden sm:inline">Personal</span>
-                <span className="sm:hidden">Info</span>
-              </TabsTrigger>
-              <TabsTrigger value="experience" className="text-xs sm:text-sm">
-                <span className="hidden sm:inline">Experience</span>
-                <span className="sm:hidden">Exp</span>
-              </TabsTrigger>
-              <TabsTrigger value="skills" className="text-xs sm:text-sm">
-                Skills
-              </TabsTrigger>
-              <TabsTrigger value="projects" className="text-xs sm:text-sm">
-                <span className="hidden sm:inline">Projects</span>
-                <span className="sm:hidden">Proj</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="ats-score"
-                className="relative text-xs sm:text-sm"
-              >
-                <span className="hidden sm:inline">ATS Score</span>
-                <span className="sm:hidden">ATS</span>
-                {atsData && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></span>
-                )}
-              </TabsTrigger>
-            </TabsList>
+            {/* Import and use our custom ResumeTabsNav component */}
+            <ResumeTabsNav 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab}
+              atsData={atsData}
+            />
 
             <TabsContent value="personal" className="space-y-4">
               <Card>

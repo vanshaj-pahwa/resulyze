@@ -100,6 +100,18 @@ html {
   background-color: #94a3b8;
 }
 
+/* Hide scrollbar but keep functionality */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
 /* Typography utilities */
 .heading-gradient {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600;
