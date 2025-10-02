@@ -64,8 +64,8 @@ export default function DashboardClient() {
     },
     {
       id: 'cover-letter',
-      title: 'Step 3: Cover Letter Generator',
-      description: 'Generate a personalized cover letter based on your resume and the job',
+      title: 'Step 3: Cover Letter & Referrals',
+      description: 'Generate personalized cover letters and referral messages',
       icon: <PenSquare className="w-5 h-5" />,
       requiredSteps: ['job-analysis', 'resume-optimization'],
       component: <CoverLetterGenerator jobData={jobData} resumeData={resumeData} />

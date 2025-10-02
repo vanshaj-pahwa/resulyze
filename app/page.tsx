@@ -91,7 +91,7 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-16">
             <Card className="border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 bg-white">
               <CardHeader>
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
@@ -116,7 +116,7 @@ export default function Home() {
             <Card className="border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 bg-white">
               <CardHeader>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <MessageSquare className="w-6 h-6 text-green-600" />
+                  <FileText className="w-6 h-6 text-green-600" />
                 </div>
                 <CardTitle className="text-xl font-semibold">Resume Builder</CardTitle>
               </CardHeader>
@@ -144,6 +144,27 @@ export default function Home() {
               <CardContent>
                 <CardDescription className="text-gray-600">
                   Generate personalized cover letters tailored to specific job descriptions in seconds
+                </CardDescription>
+                <div className="mt-4">
+                  <Link href="/dashboard?tab=cover-letter">
+                    <Button variant="link" className="text-blue-600 p-0 h-auto font-medium flex items-center">
+                      Try it now <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 bg-white">
+              <CardHeader>
+                <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mb-4">
+                  <MessageSquare className="w-6 h-6 text-teal-600" />
+                </div>
+                <CardTitle className="text-xl font-semibold">Referral Messages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-gray-600">
+                  Craft professional networking messages to request job referrals from your connections
                 </CardDescription>
                 <div className="mt-4">
                   <Link href="/dashboard?tab=cover-letter">

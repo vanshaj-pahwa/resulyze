@@ -4,10 +4,9 @@ A comprehensive web application that helps job seekers tailor their applications
 
 ## Features
 
-- **Job Description Analysis**: Extract key skills, qualifications, and keywords from job postings
+- **Job Description Analysis**: Extract key skills, qualifications, and keywords from job postings using text, file upload, or URL input
 - **Smart Resume Builder**: AI-optimized resume creation with multiple templates
-- **Cover Letter Generator**: Personalized cover letters tailored to job requirements
-- **Referral Message Creator**: Professional networking messages for referrals
+- **Cover Letter & Referral Generator**: Personalized cover letters and professional networking messages for referrals
 - **Interview Preparation**: AI-generated interview questions based on job and resume
 - **Document Export**: Download resumes in PDF and DOCX formats
 - **User Authentication**: Secure authentication with Clerk
@@ -72,32 +71,11 @@ npm run dev
 ## Usage
 
 1. **Sign Up/Sign In**: Create an account or sign in using Clerk authentication
-2. **Analyze Job Description**: Paste or upload a job description to extract key requirements
+2. **Analyze Job Description**: Paste, upload, or provide a URL to a job description to extract key requirements
 3. **Build Resume**: Use the resume builder to create or optimize your resume based on job requirements
-4. **Generate Cover Letter**: Create personalized cover letters tailored to the job
-5. **Create Referral Messages**: Generate professional networking messages
-6. **Prepare for Interviews**: Get AI-generated interview questions specific to your profile and the job
-7. **Export Documents**: Download your resume in PDF or DOCX format
-
-## Project Structure
-
-```
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   ├── dashboard/         # Dashboard pages
-│   ├── sign-in/          # Authentication pages
-│   └── sign-up/
-├── components/            # React components
-│   ├── ui/               # Reusable UI components
-│   ├── dashboard/        # Dashboard-specific components
-│   ├── job/              # Job description processing
-│   ├── resume/           # Resume builder components
-│   ├── cover-letter/     # Cover letter generator
-│   └── interview/        # Interview preparation
-├── lib/                  # Utility functions
-├── models/               # Database models
-└── public/               # Static assets
-```
+4. **Generate Cover Letter & Referrals**: Create personalized cover letters and referral messages tailored to the job (available in the same workflow step)
+5. **Prepare for Interviews**: Get AI-generated interview questions specific to your profile and the job
+6. **Export Documents**: Download your resume in PDF or DOCX format
 
 ## API Endpoints
 
@@ -119,8 +97,10 @@ The resume template matches the provided design with:
 
 ### AI Integration
 - Uses Google Gemini API for intelligent content generation
-- Analyzes job descriptions to extract relevant keywords and requirements
+- Analyzes job descriptions to extract relevant keywords, requirements, experience level, and location details
+- Processes job descriptions from text input, file uploads, or directly from web URLs
 - Optimizes resume content to match job requirements while maintaining truthfulness
+- Generates personalized cover letters and referral messages for networking
 - Generates contextual interview questions based on job and candidate profile
 
 ### Authentication & Data Persistence
@@ -128,19 +108,3 @@ The resume template matches the provided design with:
 - User data stored in MongoDB
 - Resume versions and job applications tracked
 - Persistent user sessions
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
