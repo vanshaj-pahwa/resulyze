@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
-import AuthTokenHandler from '../auth/AuthTokenHandler';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
@@ -12,9 +11,6 @@ export default function Navbar() {
 
   return (
     <>
-      <SignedIn>
-        <AuthTokenHandler />
-      </SignedIn>
       <nav className="sticky top-0 z-50 border-b bg-white shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">

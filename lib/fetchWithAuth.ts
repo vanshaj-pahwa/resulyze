@@ -2,6 +2,7 @@
  * Utility function for making authenticated API calls
  * This ensures that all requests include proper authentication headers
  */
+import { getAuthToken, clearAuthToken } from './auth';
 
 /**
  * Make an authenticated API request
@@ -11,20 +12,7 @@
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   // Get auth token if available
-  let authToken = '';
-  
-  try {
-    // Try to get token from localStorage if in browser environment
-    if (typeof window !== 'undefined') {
-      // Check for Clerk session token
-      const sessionToken = localStorage.getItem('clerk-session-token');
-      if (sessionToken) {
-        authToken = sessionToken;
-      }
-    }
-  } catch (error) {
-    console.error('Error accessing auth token:', error);
-  }
+  const authToken = getAuthToken() || '';
 
   // Set up headers
   const headers = new Headers(options.headers || {});
@@ -48,7 +36,15 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     // Handle 401 errors
     if (response.status === 401) {
       console.error('Authentication failed. User may need to log in again.');
-      // You could redirect to login page or refresh auth token here
+      
+      // Clear the expired token
+      clearAuthToken();
+      
+      // If in client-side environment, redirect to sign-in
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/sign-in')) {
+        // Redirect to sign-in if not already there
+        window.location.href = '/sign-in';
+      }
     }
     
     return response;
