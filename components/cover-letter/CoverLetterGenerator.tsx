@@ -141,19 +141,27 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div>
-                        <Button onClick={generateCoverLetter} disabled={isGenerating || !jobData || !resumeData}>
+                      <div className="w-full sm:w-auto">
+                        <Button 
+                          onClick={generateCoverLetter} 
+                          disabled={isGenerating || !jobData || !resumeData}
+                          className="w-full sm:w-auto"
+                        >
                           {isGenerating ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Generating...
+                              <span className="hidden xs:inline">Generating...</span>
+                              <span className="xs:hidden">Loading...</span>
                             </>
                           ) : (
-                            'Generate Cover Letter'
+                            <>
+                              <span className="hidden sm:inline">Generate Cover Letter</span>
+                              <span className="sm:hidden">Generate</span>
+                            </>
                           )}
                         </Button>
                       </div>
@@ -167,11 +175,11 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                 </TooltipProvider>
                 {coverLetter && (
                   <>
-                    <Button variant="outline" onClick={() => copyToClipboard(coverLetter)}>
+                    <Button variant="outline" onClick={() => copyToClipboard(coverLetter)} className="flex-1 sm:flex-none">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
-                    <Button variant="outline" onClick={() => downloadAsDoc(coverLetter, 'cover-letter')}>
+                    <Button variant="outline" onClick={() => downloadAsDoc(coverLetter, 'cover-letter')} className="flex-1 sm:flex-none">
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
@@ -232,19 +240,27 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                 </div>
               )}
 
-              <div className="flex gap-2 flex-wrap">
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:flex sm:flex-wrap gap-2">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div>
-                        <Button onClick={generateReferralMessage} disabled={isGenerating || !jobData || !resumeData}>
+                      <div className="xs:col-span-2 w-full sm:w-auto">
+                        <Button 
+                          onClick={generateReferralMessage} 
+                          disabled={isGenerating || !jobData || !resumeData}
+                          className="w-full sm:w-auto"
+                        >
                           {isGenerating ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Generating...
+                              <span className="hidden xs:inline">Generating...</span>
+                              <span className="xs:hidden">Loading...</span>
                             </>
                           ) : (
-                            'Generate Referral Message'
+                            <>
+                              <span className="hidden sm:inline">Generate Referral Message</span>
+                              <span className="sm:hidden">Generate Message</span>
+                            </>
                           )}
                         </Button>
                       </div>
@@ -258,16 +274,16 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                 </TooltipProvider>
                 {referralMessage && (
                   <>
-                    <Button variant="outline" onClick={() => copyToClipboard(referralMessage)}>
+                    <Button variant="outline" onClick={() => copyToClipboard(referralMessage)} className="w-full xs:w-auto">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
-                    <Button variant="outline" onClick={() => downloadAsDoc(referralMessage, 'referral-message')}>
+                    <Button variant="outline" onClick={() => downloadAsDoc(referralMessage, 'referral-message')} className="w-full xs:w-auto">
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
                     {contactEmail && (
-                      <Button variant="outline" onClick={sendEmail} className="bg-blue-50 hover:bg-blue-100">
+                      <Button variant="outline" onClick={sendEmail} className="w-full xs:w-auto bg-blue-50 hover:bg-blue-100">
                         <Mail className="w-4 h-4 mr-2" />
                         Send Email
                       </Button>

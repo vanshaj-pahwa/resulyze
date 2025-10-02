@@ -88,12 +88,17 @@ export async function POST(request: NextRequest) {
     }
 
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash', // Try using 'gemini-1.5-flash' as fallback if needed
+      model: 'gemini-2.0-flash',
       generationConfig: {
         temperature: 0.7,
         topP: 0.8,
         topK: 40,
-        maxOutputTokens: 1024,
+        // Increase token limit for system design questions that need more detailed code examples
+        maxOutputTokens: category === 'Problem Solving' || 
+                        category === 'System Design' || 
+                        (question && question.toLowerCase().includes('system design')) || 
+                        (question && question.toLowerCase().includes('architecture')) ? 
+                        4096 : 1024,
       }
     });
 
@@ -121,7 +126,8 @@ export async function POST(request: NextRequest) {
     - Required Skills: ${Array.isArray(requiredSkillsArray) ? requiredSkillsArray.join(', ') : 'N/A'}
 
     Format the answer in first person as if the candidate is speaking.
-    For Technical questions: Include specific examples from the candidate's experience and relate to required job skills.
+    For Technical questions: Include specific examples from the candidate's experience and relate to required job skills **and** if the question invites code, include code snippets that illustrates the point.
+    If the category is Technical/Problem-Solving/DSA and the question invites implementation, include a **brief, runnable code or config snippet** that illustrates the key idea.
     For Behavioral questions: Use the STAR method (Situation, Task, Action, Result).
     For Experience questions: Highlight relevant accomplishments and quantify achievements when possible.
     

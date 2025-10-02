@@ -170,10 +170,16 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
 
               {extractedData.skills && extractedData.skills.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Required Skills</h4>
-                  <div className="flex flex-wrap gap-2">
+                  <h4 className="font-semibold mb-2 text-base xs:text-lg">Required Skills</h4>
+                  <div className="flex flex-wrap gap-1 xs:gap-2">
                     {extractedData.skills.map((skill: string, index: number) => (
-                      <Badge key={`skill-${skill}-${index}`} variant="secondary">{skill}</Badge>
+                      <Badge 
+                        key={`skill-${skill}-${index}`} 
+                        variant="secondary"
+                        className="text-xs xs:text-sm py-1 mb-1"
+                      >
+                        {skill}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -181,10 +187,10 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
 
               {extractedData.qualifications && extractedData.qualifications.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Key Qualifications</h4>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <h4 className="font-semibold mb-2 text-base xs:text-lg">Key Qualifications</h4>
+                  <ul className="list-disc list-inside space-y-1 text-xs xs:text-sm text-gray-600 ml-0 xs:ml-2">
                     {extractedData.qualifications.map((qual: string, index: number) => (
-                      <li key={`qual-${index}-${qual.substring(0, 15)}`}>{qual}</li>
+                      <li key={`qual-${index}-${qual.substring(0, 15)}`} className="mb-1">{qual}</li>
                     ))}
                   </ul>
                 </div>
@@ -192,10 +198,16 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
 
               {extractedData.keywords && extractedData.keywords.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Important Keywords</h4>
-                  <div className="flex flex-wrap gap-2">
+                  <h4 className="font-semibold mb-2 text-base xs:text-lg">Important Keywords</h4>
+                  <div className="flex flex-wrap gap-1 xs:gap-2">
                     {extractedData.keywords.map((keyword: string, index: number) => (
-                      <Badge key={`keyword-${keyword}-${index}`} variant="outline">{keyword}</Badge>
+                      <Badge 
+                        key={`keyword-${keyword}-${index}`} 
+                        variant="outline"
+                        className="text-xs xs:text-sm py-1 mb-1"
+                      >
+                        {keyword}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -217,12 +229,14 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
             </CardContent>
           </Card>
           
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-center sm:justify-end mt-4">
             <Button 
               onClick={() => window.dispatchEvent(new CustomEvent('move-to-resume-optimization'))}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm xs:text-base"
             >
-              Optimize My Resume Based on This Analysis →
+              <span className="hidden xs:inline">Optimize My Resume Based on This Analysis</span>
+              <span className="xs:hidden">Optimize Resume</span>
+              <span className="ml-1">→</span>
             </Button>
           </div>
         </div>

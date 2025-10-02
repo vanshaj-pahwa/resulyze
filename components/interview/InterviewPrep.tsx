@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -57,16 +58,12 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
     
     setIsResearchLoading(true)
     try {
-      const response = await fetch('/api/research-company', {
+      const response = await fetchWithAuth('/api/research-company', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           companyName: jobData.company,
           jobTitle: jobData.jobTitle || ''
-        }),
-        credentials: 'include'
+        })
       })
       
       if (!response.ok) {
@@ -86,7 +83,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
     }
   }
   
-  const generateQuestionsForRound = async (roundName: string) => {
+  const generateQuestionsForRound = async (roundName: string, description: string) => {
     if (!jobData || !resumeData) {
       alert('Please complete job analysis and resume first');
       return;
@@ -96,17 +93,14 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
     setIsGeneratingRoundQuestions(true);
     
     try {
-      const response = await fetch('/api/generate-interview-questions', {
+      const response = await fetchWithAuth('/api/generate-interview-questions', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           jobData, 
           resumeData,
-          interviewRound: roundName // Pass the round name to the API
-        }),
-        credentials: 'include'
+          interviewRound: roundName,
+          roundDetails: description
+        })
       });
       
       if (!response.ok) {
@@ -150,13 +144,9 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
 
     setIsGenerating(true)
     try {
-      const response = await fetch('/api/generate-interview-questions', {
+      const response = await fetchWithAuth('/api/generate-interview-questions', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jobData, resumeData }),
-        credentials: 'include'
+        body: JSON.stringify({ jobData, resumeData })
       })
 
       if (!response.ok) {
@@ -248,11 +238,8 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
     
     try {
       // Make sure we're using the same fetch configuration as generateQuestions
-      const response = await fetch('/api/generate-interview-answer', {
+      const response = await fetchWithAuth('/api/generate-interview-answer', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           question: question.question,
           category: question.category,
@@ -260,9 +247,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
           resumeData,
           jobData,
           roundName // Pass the round name if available
-        }),
-        // Make sure credentials are included to send auth cookies
-        credentials: 'include'
+        })
       });
       
       if (!response.ok) {
@@ -356,17 +341,24 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
               {isResearchLoading ? (
                 <span className="flex items-center">
                   <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                  Researching {jobData?.company || 'company'} interview process...
+                  <span className="hidden xs:inline">Researching {jobData?.company || 'company'} interview process...</span>
+                  <span className="xs:hidden">Researching...</span>
                 </span>
               ) : companyResearch ? (
-                <span>Explore the interview process at {jobData?.company || 'the company'} and prepare for each stage</span>
+                <span>
+                  <span className="hidden sm:inline">Explore the interview process at {jobData?.company || 'the company'} and prepare for each stage</span>
+                  <span className="sm:hidden">Interview process available</span>
+                </span>
               ) : (
-                <span>Analyzing interview process at {jobData?.company || 'the company'}...</span>
+                <span>
+                  <span className="hidden xs:inline">Analyzing interview process at {jobData?.company || 'the company'}...</span>
+                  <span className="xs:hidden">Analyzing interview process...</span>
+                </span>
               )}
             </p>
           </div>
         </div>
-        <div>
+        <div className="w-full md:w-auto">
           <Button 
             onClick={generateQuestions} 
             disabled={isGenerating || !jobData || !resumeData} 
@@ -375,12 +367,14 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
+                <span className="hidden xs:inline">Generating...</span>
+                <span className="xs:hidden">Loading...</span>
               </>
             ) : (
               <>
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Generate General Questions
+                <span className="hidden sm:inline">Generate General Questions</span>
+                <span className="sm:hidden">General Questions</span>
               </>
             )}
           </Button>
@@ -457,31 +451,34 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                   <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mr-3 font-bold text-sm">
+                        <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mr-2 sm:mr-3 font-bold text-sm flex-shrink-0">
                           {index + 1}
                         </div>
-                        <CardTitle className="text-lg font-medium">{round.roundName}</CardTitle>
+                        <CardTitle className="text-sm sm:text-lg font-medium">{round.roundName}</CardTitle>
                       </div>
                       <Button 
-                        onClick={() => generateQuestionsForRound(round.roundName)}
+                        onClick={() => generateQuestionsForRound(round.roundName, round.description)}
                         disabled={isGeneratingRoundQuestions && currentRound === round.roundName}
-                        className={`${isGeneratingRoundQuestions && currentRound === round.roundName ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'} text-white shadow-sm transition-all duration-200`}
+                        className={`${isGeneratingRoundQuestions && currentRound === round.roundName ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'} text-white shadow-sm transition-all duration-200 text-xs sm:text-sm`}
                         size="sm"
                       >
                         {isGeneratingRoundQuestions && currentRound === round.roundName ? (
                           <>
-                            <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                            Generating...
+                            <Loader2 className="w-3 h-3 mr-1 sm:mr-2 animate-spin" />
+                            <span className="hidden xs:inline">Generating...</span>
+                            <span className="xs:hidden">...</span>
                           </>
                         ) : roundSpecificQuestions[round.roundName] ? (
                           <>
-                            <RefreshCw className="w-3 h-3 mr-2" />
-                            Refresh Questions
+                            <RefreshCw className="w-3 h-3 mr-1 sm:mr-2" />
+                            <span className="hidden xs:inline">Refresh Questions</span>
+                            <span className="xs:hidden">Refresh</span>
                           </>
                         ) : (
                           <>
-                            <MessageSquare className="w-3 h-3 mr-2" />
-                            Generate Questions
+                            <MessageSquare className="w-3 h-3 mr-1 sm:mr-2" />
+                            <span className="hidden xs:inline">Generate Questions</span>
+                            <span className="xs:hidden">Generate</span>
                           </>
                         )}
                       </Button>
@@ -588,12 +585,14 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                                       {item.isGeneratingAnswer ? (
                                         <>
                                           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                          Generating...
+                                          <span className="hidden xs:inline">Generating...</span>
+                                          <span className="xs:hidden">...</span>
                                         </>
                                       ) : (
                                         <>
                                           <MessageSquare className="w-3 h-3 mr-1" />
-                                          Generate Answer
+                                          <span className="hidden xs:inline">Generate Answer</span>
+                                          <span className="xs:hidden">Answer</span>
                                         </>
                                       )}
                                     </Button>
@@ -624,9 +623,9 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
               {questions.map((item, index) => (
                 <Card key={`question-${index}-${item.question?.substring(0, 15)}`} className="border border-gray-200 hover:border-blue-200 transition-all shadow-sm hover:shadow-md rounded-xl overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-blue-50 to-gray-50 pb-4">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg text-gray-800 font-medium">{item.question}</CardTitle>
-                      <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm`}>
+                    <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 xs:gap-0">
+                      <CardTitle className="text-base sm:text-lg text-gray-800 font-medium">{item.question}</CardTitle>
+                      <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm text-xs mt-1 xs:mt-0`}>
                         {item.category}
                       </Badge>
                     </div>
@@ -677,31 +676,34 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                       )}
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between pt-3">
+                  <CardFooter className="flex justify-center xs:justify-between pt-3">
                     {item.answer && !item.showAnswer ? (
                       <Button 
                         variant="outline" 
                         onClick={() => toggleShowAnswer(index)}
-                        className="text-green-700 border-green-200 hover:bg-green-50 hover:border-green-300 shadow-sm transition-all duration-200 transform hover:-translate-y-0.5"
+                        className="text-green-700 border-green-200 hover:bg-green-50 hover:border-green-300 shadow-sm transition-all duration-200 transform hover:-translate-y-0.5 w-full xs:w-auto"
                       >
                         <ChevronDown className="w-4 h-4 mr-2" />
-                        <span className="bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent font-medium">View Answer</span>
+                        <span className="bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent font-medium hidden xs:inline">View Answer</span>
+                        <span className="bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent font-medium xs:hidden">View</span>
                       </Button>
                     ) : !item.answer && (
                       <Button 
                         onClick={() => generateAnswer(index)}
                         disabled={item.isGeneratingAnswer}
-                        className={`${item.isGeneratingAnswer ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700'} text-white shadow-sm transition-all duration-200 transform hover:-translate-y-0.5`}
+                        className={`${item.isGeneratingAnswer ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700'} text-white shadow-sm transition-all duration-200 transform hover:-translate-y-0.5 w-full xs:w-auto`}
                       >
                         {item.isGeneratingAnswer ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            <span className="text-blue-700">Generating...</span>
+                            <span className="text-blue-700 hidden xs:inline">Generating...</span>
+                            <span className="text-blue-700 xs:hidden">Loading...</span>
                           </>
                         ) : (
                           <>
                             <MessageSquare className="w-4 h-4 mr-2" />
-                            Generate Answer
+                            <span className="hidden xs:inline">Generate Answer</span>
+                            <span className="xs:hidden">Answer</span>
                           </>
                         )}
                       </Button>

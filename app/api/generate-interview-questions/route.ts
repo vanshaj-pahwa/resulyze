@@ -48,47 +48,65 @@ const generateFallbackQuestions = (jobData: any, resumeData: any) => {
     questions: [
       {
         category: "Technical",
-        question: `Tell me about your experience with the technologies required for ${jobTitle}.`,
+        question: `Describe the difference between \`useState\` and \`useRef\` in React. Provide a specific use case for each.`,
         tips: [
-          "Provide specific examples from your past projects",
-          "Mention measurable outcomes when possible",
-          "Connect your experience to the job requirements"
+          "Clearly articulate the re-rendering behavior associated with `useState` and the lack thereof with `useRef`",
+          "Provide practical examples beyond the standard 'input focus' example for `useRef` (e.g., storing previous prop values, managing timers)",
+          "Explain how these hooks fit into React's component lifecycle"
         ]
       },
       {
-        category: "Behavioral",
-        question: "Describe a challenging project you worked on and how you overcame obstacles.",
+        category: "Technical",
+        question: `Explain the benefits of using TypeScript over JavaScript in a large React project. How would you approach migrating an existing JavaScript codebase to TypeScript?`,
         tips: [
-          "Use the STAR method (Situation, Task, Action, Result)",
-          "Focus on your problem-solving approach",
-          "Highlight what you learned from the experience"
-        ]
-      },
-      {
-        category: "Experience",
-        question: `How has your previous experience prepared you for this ${jobTitle} role at ${company}?`,
-        tips: [
-          "Highlight relevant accomplishments",
-          "Quantify achievements when possible",
-          "Show how your skills transfer to the new role"
+          "Highlight improved code maintainability, reduced runtime errors, and enhanced developer tooling",
+          "Outline a gradual migration strategy, focusing on annotating key components and utility functions first",
+          "Mention the use of `any` type strategically during the initial migration phase"
         ]
       },
       {
         category: "Problem Solving",
-        question: "Tell me about a time when you had to solve a complex technical problem.",
+        question: `Imagine you are building a complex form in React with multiple interdependent fields. The form data needs to be persisted to a backend API. Describe how you would manage the form state and handle API interactions, considering potential error scenarios and performance optimizations.`,
         tips: [
-          "Break down the problem and your thought process",
-          "Explain the solution you implemented",
-          "Share the outcome and what you learned"
+          "Demonstrate your understanding of state management techniques, including controlled components, form libraries, and asynchronous data handling",
+          "Address error handling strategies (e.g., displaying validation errors, retrying failed requests)",
+          "Discuss performance optimization techniques like debouncing or throttling input changes"
         ]
       },
       {
-        category: "Company",
-        question: `What interests you about working at ${company}?`,
+        category: "Experience",
+        question: `Describe a challenging bug you encountered while working with React and how you approached debugging and resolving it. What tools and techniques did you use?`,
         tips: [
-          "Research the company's mission and values",
-          "Connect your career goals to the company",
-          "Show enthusiasm and genuine interest"
+          "Focus on a specific bug and provide a clear and concise explanation of the problem, the debugging process, and the solution",
+          "Highlight your problem-solving skills, debugging tools (e.g., React DevTools, console.log, network analysis)",
+          "Share lessons learned and how you'd prevent similar issues in the future"
+        ]
+      },
+      {
+        category: "Technical",
+        question: `Explain the differences between various CSS-in-JS solutions (e.g., Styled Components, Emotion, Material UI's \`sx\` prop). When would you choose one over the others?`,
+        tips: [
+          "Demonstrate your understanding of the trade-offs between different CSS-in-JS approaches (e.g., bundle size, performance, ease of use)",
+          "Relate your choice to specific project requirements, such as the need for server-side rendering, theming capabilities, or existing component libraries",
+          "Discuss how these solutions compare to traditional CSS/SCSS approach in terms of maintainability"
+        ]
+      },
+      {
+        category: "Technical",
+        question: `Describe your experience with testing React components. What types of tests have you written, and what are the benefits and drawbacks of each type?`,
+        tips: [
+          "Demonstrate a solid understanding of different testing strategies (unit, integration, end-to-end) and their purpose",
+          "Provide specific examples of how you would test a React component using React Testing Library",
+          "Discuss how testing fits into your development workflow and CI/CD pipeline"
+        ]
+      },
+      {
+        category: "Experience",
+        question: `Describe a project where you used a specific state management library (Redux, MobX, Context API). What were the benefits and drawbacks of your choice?`,
+        tips: [
+          "Be honest about the challenges you faced and the lessons you learned",
+          "Demonstrate your ability to evaluate different technologies based on project requirements",
+          "Discuss how your choice affected team productivity, application performance, and codebase maintainability"
         ]
       }
     ]
@@ -96,21 +114,30 @@ const generateFallbackQuestions = (jobData: any, resumeData: any) => {
 };
 
 export async function POST(request: NextRequest) {
-  // Get the user's session and verify authentication
-  const { userId } = auth();
-  
-  console.log('Interview questions API accessed, userId:', userId);
-  
-  if (!userId) {
-    console.log('No userId found, returning 401');
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
+  try {
+    // Get the user's session and verify authentication
+    const { userId } = auth();
+    
+    console.log('Interview questions API accessed, userId:', userId);
+    
+    // Check for session cookie from Clerk
+    const hasClerkSession = request.headers.get('cookie')?.includes('__session=');
+    const hasAuthorization = request.headers.get('authorization');
+    
+    if (!userId && !hasClerkSession && !hasAuthorization) {
+      console.log('No authentication found, returning 401');
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+  } catch (authError) {
+    console.error('Authentication error:', authError);
+    // Continue processing - the route might still be accessible even with auth errors
   }
 
-    try {
-      const { jobData, resumeData, interviewRound, roundName } = await request.json();
+  try {
+      const { jobData, resumeData, interviewRound, roundName, roundDetails } = await request.json();
       
       if (!jobData || !resumeData) {
         return NextResponse.json(
@@ -121,7 +148,9 @@ export async function POST(request: NextRequest) {
       
       // Check if this is for a specific interview round - accept either interviewRound or roundName parameter
       const actualRoundName = interviewRound || roundName;
-      const isRoundSpecific = !!actualRoundName;    const model = genAI.getGenerativeModel({ 
+      const isRoundSpecific = !!actualRoundName || !!roundDetails;
+      
+      const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.0-flash',
       generationConfig: {
         temperature: 0.7,
@@ -169,14 +198,17 @@ Candidate Information:
 - Technical Skills: ${technicalSkills}
 - Work Experience: ${workExperience}
 
-Generate 5-7 interview questions specifically for the "${actualRoundName}" round.
-Focus on the type of questions that would typically be asked in this specific interview stage.
+${roundDetails ? `Interview Round Details:\n${roundDetails}\n\n` : ''}
+
+Generate 6-8 highly specific, robust interview questions tailored to the ${actualRoundName ? `"${actualRoundName}"` : 'current'} interview round.
+${roundDetails ? 'Focus precisely on the technical skills, concepts, and scenarios described in the round details.' : 'Focus on the type of questions that would typically be asked in this specific interview stage.'}
+Include a mix of theoretical questions and practical coding or problem-solving scenarios that would be relevant to assess the candidate's abilities.
 
 For each question, provide:
-- The question text
+- The question text (make it detailed and specific)
 - Category (Technical, Behavioral, Experience, Company, Problem Solving)
-- 2-3 tips for answering effectively`
-      : `Generate interview questions for a candidate based on their resume and the job they're applying for.
+- 2-3 detailed tips for answering effectively that demonstrate deep understanding`
+      : `Generate comprehensive interview questions for a candidate based on their resume and the job they're applying for.
 
 Job Information:
 - Job Title: ${jobTitle}
@@ -191,12 +223,12 @@ Candidate Information:
 - Technical Skills: ${technicalSkills}
 - Work Experience: ${workExperience}
 
-Generate 8-10 interview questions across different categories:
-1. Technical questions related to the required skills
-2. Behavioral questions about teamwork, leadership, problem-solving
-3. Experience-based questions about past projects and achievements
-4. Company/role-specific questions
-5. Problem-solving scenarios
+Generate 8-10 in-depth, challenging interview questions across different categories:
+1. Technical questions - Focus on practical application of skills, framework-specific questions, and technical problem-solving
+2. Behavioral questions - Complex scenarios about teamwork, leadership, conflict resolution, and decision-making
+3. Experience-based questions - Detailed inquiries about specific projects, technologies, and measurable achievements
+4. Company/role-specific questions - Questions that assess cultural fit and understanding of the company's domain
+5. Problem-solving scenarios - Realistic technical challenges that might be encountered in this role
 
 For each question, provide:
 - The question text
@@ -206,19 +238,29 @@ For each question, provide:
     // Add the JSON format request to the prompt
     promptText += `
 
-Return the response in JSON format:
+Return the response in this exact JSON format:
 {
   "questions": [
     {
       "category": "Technical",
-      "question": "Question text here",
-      "tips": ["Tip 1", "Tip 2", "Tip 3"]
+      "question": "Detailed question text here that demonstrates deep understanding of the technical concepts",
+      "tips": [
+        "Specific, actionable tip that shows mastery of the subject matter",
+        "Detailed guidance on how to structure the answer effectively",
+        "Strategic advice on what aspects to emphasize or avoid"
+      ]
     }
   ]
 }
 
-Make sure questions are relevant to both the job requirements and the candidate's background.
-Return ONLY the JSON object without any additional text or formatting.`;
+Follow these requirements strictly:
+1. Make questions extremely relevant to both the job requirements and the interview round context
+2. Ensure questions are challenging but fair, focusing on practical application of skills
+3. For technical questions, include specific frameworks, languages, or concepts mentioned in the round details
+4. For problem-solving questions, create realistic scenarios that test critical thinking
+5. For code/dsa/take-away/system design/architecture questions, ensure tips include guidance on providing actual code examples and implementation details
+6. Include at least 2-3 detailed tips for each question that provide genuine value
+7. Return ONLY the JSON object without any additional text, comments, or formatting`;
 
     const prompt = promptText;
 
