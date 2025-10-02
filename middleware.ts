@@ -6,12 +6,14 @@ export default authMiddleware({
     '/',
     '/sign-in(.*)',
     '/sign-up(.*)',
-    '/api/webhooks(.*)'
+    '/api/webhooks(.*)',
+    '/api/health(.*)'
   ],
   // Routes that can always be accessed, and have
   // no authentication information
   ignoredRoutes: [
-    '/api/webhooks(.*)'
+    '/api/webhooks(.*)',
+    '/api/health(.*)'
   ]
 })
 

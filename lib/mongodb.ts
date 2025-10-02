@@ -51,9 +51,42 @@ export async function isMongoAvailable(): Promise<boolean> {
     if (!isConnected) {
       await connectToDB();
     }
-    return mongoose.connection.readyState === 1;
+    
+    // Check connection state (1 = connected)
+    const isConnectedState = mongoose.connection.readyState === 1;
+    
+    // More detailed logging to help troubleshoot
+    console.log(`MongoDB connection state: ${mongoose.connection.readyState} (${
+      mongoose.connection.readyState === 0 ? 'disconnected' :
+      mongoose.connection.readyState === 1 ? 'connected' :
+      mongoose.connection.readyState === 2 ? 'connecting' :
+      mongoose.connection.readyState === 3 ? 'disconnecting' : 
+      'uninitialized'
+    })`);
+    
+    // Perform an additional ping test to verify the connection is actually working
+    if (isConnectedState) {
+      try {
+        // Safely check if db property exists before using it
+        const db = mongoose.connection.db;
+        if (db) {
+          await db.admin().ping();
+          console.log('MongoDB ping successful');
+          return true;
+        } else {
+          console.log('MongoDB connection db property is undefined');
+          return false;
+        }
+      } catch (pingError) {
+        console.error('MongoDB ping failed:', pingError);
+        return false;
+      }
+    }
+    
+    // Check for connected state
+    return isConnectedState;
   } catch (error) {
-    console.error('MongoDB not available:', error);
+    console.error('MongoDB connection check failed:', error);
     return false;
   }
 }
