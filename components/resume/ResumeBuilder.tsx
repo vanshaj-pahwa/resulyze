@@ -821,19 +821,19 @@ export default function ResumeBuilder({
       )}
 
       {/* Button section with responsive layout */}
-      <div className="flex flex-col gap-3 sm:hidden">
-        {/* Mobile view - stacked buttons */}
-        <div className="flex justify-center">
+      {/* Mobile and tablet view - stacked buttons (anything smaller than desktop) */}
+      <div className="flex flex-col gap-3 md:hidden">
+        <div className="grid grid-cols-1 gap-3">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full max-w-[320px] flex items-center justify-center h-10"
-                  onClick={() => document.getElementById("resume-upload")?.click()}
+                  className="w-full flex items-center justify-center h-10"
+                  onClick={() => document.getElementById("resume-upload-mobile")?.click()}
                 >
                   <input
-                    id="resume-upload"
+                    id="resume-upload-mobile"
                     type="file"
                     accept=".pdf,.docx"
                     onChange={handleResumeUpload}
@@ -848,14 +848,12 @@ export default function ResumeBuilder({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
         
-        <div className="flex justify-center">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="w-full max-w-[320px] h-10"
+                  className="w-full h-10"
                   onClick={optimizeResume}
                   disabled={isOptimizing || !jobData}
                 >
@@ -876,9 +874,7 @@ export default function ResumeBuilder({
               )}
             </Tooltip>
           </TooltipProvider>
-        </div>
 
-        <div className="flex justify-center">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -886,7 +882,7 @@ export default function ResumeBuilder({
                   onClick={calculateATSScore}
                   disabled={isCalculatingATS || !jobData || !resumeData}
                   variant="outline"
-                  className="w-full max-w-[320px] h-10 flex items-center justify-center"
+                  className="w-full h-10 flex items-center justify-center"
                 >
                   {isCalculatingATS ? (
                     <>
@@ -910,11 +906,11 @@ export default function ResumeBuilder({
           </TooltipProvider>
         </div>
         
-        <div className="flex justify-center gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Button 
             variant="outline" 
             onClick={() => downloadResume("pdf")} 
-            className="w-36 flex items-center justify-center h-10 px-2"
+            className="flex items-center justify-center h-10"
             size="sm"
           >
             <Download className="w-4 h-4 mr-1 flex-shrink-0" />
@@ -923,7 +919,7 @@ export default function ResumeBuilder({
           <Button 
             variant="outline" 
             onClick={() => downloadResume("docx")} 
-            className="w-36 flex items-center justify-center h-10 px-2"
+            className="flex items-center justify-center h-10"
             size="sm"
           >
             <Download className="w-4 h-4 mr-1 flex-shrink-0" />
@@ -932,8 +928,8 @@ export default function ResumeBuilder({
         </div>
       </div>
       
-      {/* Desktop view - inline buttons with left and right aligned groups */}
-      <div className="hidden sm:flex sm:justify-between sm:items-center sm:mb-4">
+      {/* Desktop view - left and right aligned button groups */}
+      <div className="hidden md:flex md:justify-between md:items-center md:mb-4">
         <div className="flex items-center gap-2">
           <TooltipProvider>
             <Tooltip>
@@ -993,7 +989,7 @@ export default function ResumeBuilder({
                   onClick={calculateATSScore}
                   disabled={isCalculatingATS || !jobData || !resumeData}
                   variant="outline"
-                  className="h-10 flex items-center justify-center"
+                  className="flex items-center h-10"
                 >
                   {isCalculatingATS ? (
                     <>
@@ -1022,16 +1018,15 @@ export default function ResumeBuilder({
             variant="outline" 
             onClick={() => downloadResume("pdf")} 
             className="flex items-center h-10"
-            size="sm"
           >
             <Download className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="whitespace-nowrap">Download PDF</span>
           </Button>
+          
           <Button 
             variant="outline" 
             onClick={() => downloadResume("docx")} 
             className="flex items-center h-10"
-            size="sm"
           >
             <Download className="w-4 h-4 mr-2 flex-shrink-0" />
             <span className="whitespace-nowrap">Download DOCX</span>

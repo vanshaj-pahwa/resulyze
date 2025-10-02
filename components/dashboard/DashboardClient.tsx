@@ -120,8 +120,8 @@ export default function DashboardClient() {
               <h3 className="text-sm font-medium text-gray-700">Application Process</h3>
               <StepsGuide />
             </div>
-            {/* Desktop view */}
-            <div className="hidden md:flex md:flex-row md:items-center gap-8">
+            {/* Desktop view - visible only on large screens */}
+            <div className="hidden lg:flex lg:flex-row lg:items-center gap-8">
               {steps.map((step, index) => (
                 <div 
                   key={`desktop-${step.id}`} 
@@ -154,8 +154,55 @@ export default function DashboardClient() {
                 </div>
               ))}
             </div>
+
+            {/* Tablet view - visible only on medium screens */}
+            <div className="hidden md:flex lg:hidden justify-center">
+              <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                {steps.map((step, index) => (
+                  <div 
+                    key={`tablet-${step.id}`} 
+                    className="flex flex-col items-center relative"
+                  >
+                    <Button
+                      variant="ghost"
+                      className={`
+                        group flex flex-col items-center justify-center gap-1 p-2 h-auto
+                        ${isStepDisabled(step) ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-50'}
+                        ${completedSteps.has(step.id) && currentStep !== step.id ? 'border border-green-200' : ''}
+                        ${currentStep === step.id ? 'bg-blue-50 border border-blue-200' : ''}
+                        rounded-lg min-w-[80px]
+                      `}
+                      onClick={() => !isStepDisabled(step) && setCurrentStep(step.id)}
+                      disabled={isStepDisabled(step)}
+                    >
+                      <div className="relative">
+                        <div className={`rounded-full w-10 h-10 flex items-center justify-center 
+                          ${completedSteps.has(step.id) ? 'bg-green-100 text-green-600' : 
+                            currentStep === step.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+                          {completedSteps.has(step.id) ? <CheckCircle className="w-5 h-5" /> : step.icon}
+                        </div>
+                        {/* Overlay the step number to ensure it remains visible in any state */}
+                        {!completedSteps.has(step.id) && (
+                          <div className="absolute bottom-0 right-0 bg-white text-xs font-medium w-5 h-5 rounded-full flex items-center justify-center border border-gray-200">
+                            {index + 1}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-xs font-medium mt-1 text-center group-hover:text-blue-700 ${currentStep === step.id ? 'text-blue-700' : ''}`}>
+                        Step {index + 1}
+                      </span>
+                    </Button>
+
+                    {/* Connector between steps (visible only on wider tablets) */}
+                    {index < steps.length - 1 && (
+                      <div className="hidden md:block lg:hidden xl:block absolute right-[-24px] top-[40%] h-0.5 bg-gray-200 w-6" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
             
-            {/* Mobile view */}
+            {/* Mobile view - visible only on small screens */}
             <div className="flex md:hidden justify-center">
               <div className="grid grid-cols-4 gap-2 w-full max-w-md">
                 {steps.map((step, index) => (
