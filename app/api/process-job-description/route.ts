@@ -7,9 +7,65 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
+// Function to fetch job description from URL
+async function fetchJobDescriptionFromUrl(url: string): Promise<string> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`)
+    }
+    
+    const contentType = response.headers.get('Content-Type') || ''
+    
+    // Handle HTML content
+    if (contentType.includes('text/html')) {
+      const html = await response.text()
+      
+      // Simple HTML cleaning - extract text from the body
+      // This is a basic approach - a more sophisticated HTML parser would be better for production
+      const bodyContent = html.replace(/<head>[\s\S]*?<\/head>/, '')
+                             .replace(/<script>[\s\S]*?<\/script>/g, '')
+                             .replace(/<style>[\s\S]*?<\/style>/g, '')
+                             .replace(/<[^>]*>/g, ' ')
+                             .replace(/\s+/g, ' ')
+                             .trim()
+      
+      return bodyContent
+    }
+    
+    // For plain text or other formats
+    return await response.text()
+    
+  } catch (error) {
+    console.error('Error fetching job description from URL:', error)
+    throw new Error('Failed to fetch job description from the provided URL')
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { jobDescription } = await request.json()
+    const { jobDescription, jobDescriptionUrl } = await request.json()
+
+    // Handle job description from URL if provided
+    let jobDescriptionText = jobDescription
+    if (jobDescriptionUrl && !jobDescription) {
+      try {
+        jobDescriptionText = await fetchJobDescriptionFromUrl(jobDescriptionUrl)
+      } catch (error) {
+        console.error('Error fetching from URL:', error)
+        return NextResponse.json(
+          { error: 'Failed to fetch job description from the provided URL' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (!jobDescriptionText || jobDescriptionText.trim() === '') {
+      return NextResponse.json(
+        { error: 'No job description provided' },
+        { status: 400 }
+      )
+    }
 
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.0-flash'
@@ -30,13 +86,14 @@ export async function POST(request: NextRequest) {
     }
 
     Job Description:
-    ${jobDescription}
+    ${jobDescriptionText}
 
     Focus on:
     - Technical skills and technologies mentioned
     - Required qualifications and certifications
     - Important keywords that should be included in a resume
-    - Years of experience required
+    - Years of experience required (be specific and include the exact requirement like "3+ years of experience")
+    - Job location and work arrangement (be specific about office location, remote/hybrid status, etc.)
     - Soft skills mentioned
 
     Return ONLY the JSON object, no additional text or formatting.
@@ -51,6 +108,12 @@ export async function POST(request: NextRequest) {
     
     try {
       const parsedData = JSON.parse(cleanedText)
+      
+      // If the job description was fetched from a URL, include it in the response
+      if (jobDescriptionUrl && !jobDescription) {
+        parsedData.jobDescription = jobDescriptionText
+      }
+      
       return NextResponse.json(parsedData)
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
