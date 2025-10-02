@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, RefreshCw, MessageSquare, ChevronUp, ChevronDown, Building, Users, Briefcase, ArrowRight } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import rehypeSanitize from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
+import 'highlight.js/styles/github-dark.css' // Import a code highlighting theme
 
 interface InterviewPrepProps {
   readonly jobData: any
@@ -413,10 +418,13 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
-                <div className="prose prose-sm max-w-none">
-                  {companyResearch.companyOverview.split('\n').map((paragraph, index) => (
-                    <p key={index} className={index > 0 ? 'mt-3' : ''}>{paragraph}</p>
-                  ))}
+                <div className="prose prose-sm max-w-none markdown-content">
+                  <ReactMarkdown
+                    rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {companyResearch.companyOverview}
+                  </ReactMarkdown>
                 </div>
               </CardContent>
             </Card>
@@ -497,9 +505,16 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                         <h4 className="font-medium text-sm text-blue-800 mb-2">Preparation Tips:</h4>
                         <ul className="space-y-1">
                           {round.tips.map((tip, tipIndex) => (
-                            <li key={tipIndex} className="text-sm flex items-start">
+                            <li key={tipIndex} className="text-sm arrow-tip">
                               <ArrowRight className="h-3 w-3 text-blue-600 mr-2 mt-1 flex-shrink-0" />
-                              {tip}
+                              <div className="prose prose-sm markdown-content">
+                                <ReactMarkdown
+                                  rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                  remarkPlugins={[remarkGfm]}
+                                >
+                                  {tip}
+                                </ReactMarkdown>
+                              </div>
                             </li>
                           ))}
                         </ul>
@@ -517,8 +532,17 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                               <Card key={`question-${round.roundName}-${qIndex}`} className="border border-gray-200 hover:border-purple-200 transition-all shadow-sm hover:shadow-md rounded-lg overflow-hidden">
                                 <CardHeader className="bg-gradient-to-r from-purple-50 to-gray-50 py-3">
                                   <div className="flex items-center justify-between">
-                                    <CardTitle className="text-md text-gray-800">{item.question}</CardTitle>
-                                    <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm`}>
+                                    <CardTitle className="text-md text-gray-800 w-full">
+                                      <div className="prose prose-sm max-w-none markdown-content">
+                                        <ReactMarkdown
+                                          rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                          remarkPlugins={[remarkGfm]}
+                                        >
+                                          {item.question}
+                                        </ReactMarkdown>
+                                      </div>
+                                    </CardTitle>
+                                    <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm ml-2 flex-shrink-0`}>
                                       {item.category}
                                     </Badge>
                                   </div>
@@ -528,9 +552,15 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                                     <h5 className="font-semibold text-xs text-gray-600 mb-2">Tips:</h5>
                                     <ul className="space-y-1">
                                       {item.tips.map((tip, tipIndex) => (
-                                        <li key={tipIndex} className="text-xs text-gray-600 flex items-start">
-                                          <span className="text-blue-500 mr-1 font-bold">•</span>
-                                          {tip}
+                                        <li key={tipIndex} className="text-xs text-gray-600 tip-list-item">
+                                          <div className="prose prose-sm markdown-content">
+                                            <ReactMarkdown
+                                              rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                              remarkPlugins={[remarkGfm]}
+                                            >
+                                              {tip}
+                                            </ReactMarkdown>
+                                          </div>
                                         </li>
                                       ))}
                                     </ul>
@@ -553,12 +583,13 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                                             <span className="ml-1 text-xs">Hide</span>
                                           </Button>
                                         </div>
-                                        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg shadow-sm border border-green-100 text-gray-800 text-xs">
-                                          {item.answer.split('\n').map((paragraph, pIndex) => (
-                                            <p key={pIndex} className={`${pIndex > 0 ? 'mt-2' : ''} leading-relaxed`}>
-                                              {paragraph}
-                                            </p>
-                                          ))}
+                                        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg shadow-sm border border-green-100 text-gray-800 text-xs markdown-content">
+                                          <ReactMarkdown
+                                            rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                            remarkPlugins={[remarkGfm]}
+                                          >
+                                            {item.answer}
+                                          </ReactMarkdown>
                                         </div>
                                       </div>
                                     )}
@@ -624,7 +655,16 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                 <Card key={`question-${index}-${item.question?.substring(0, 15)}`} className="border border-gray-200 hover:border-blue-200 transition-all shadow-sm hover:shadow-md rounded-xl overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-blue-50 to-gray-50 pb-4">
                     <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 xs:gap-0">
-                      <CardTitle className="text-base sm:text-lg text-gray-800 font-medium">{item.question}</CardTitle>
+                      <CardTitle className="text-base sm:text-lg text-gray-800 font-medium w-full">
+                        <div className="prose prose-sm max-w-none markdown-content">
+                          <ReactMarkdown
+                            rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                            remarkPlugins={[remarkGfm]}
+                          >
+                            {item.question}
+                          </ReactMarkdown>
+                        </div>
+                      </CardTitle>
                       <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm text-xs mt-1 xs:mt-0`}>
                         {item.category}
                       </Badge>
@@ -638,9 +678,15 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                       </h4>
                       <ul className="space-y-2 ml-1">
                         {item.tips.map((tip, tipIndex) => (
-                          <li key={tipIndex} className="text-sm text-gray-600 flex items-start">
-                            <span className="text-blue-500 mr-2 font-bold">•</span>
-                            {tip}
+                          <li key={tipIndex} className="text-sm text-gray-600 tip-list-item">
+                            <div className="prose prose-sm markdown-content">
+                              <ReactMarkdown
+                                rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                remarkPlugins={[remarkGfm]}
+                              >
+                                {tip}
+                              </ReactMarkdown>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -664,12 +710,13 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                             </Button>
                           </div>
                           <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg shadow-sm border border-green-100 text-gray-800">
-                            <div className="prose prose-sm max-w-none">
-                              {item.answer.split('\n').map((paragraph, pIndex) => (
-                                <p key={pIndex} className={`${pIndex > 0 ? 'mt-3' : ''} leading-relaxed`}>
-                                  {paragraph}
-                                </p>
-                              ))}
+                            <div className="prose prose-sm max-w-none markdown-content">
+                              <ReactMarkdown
+                                rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+                                remarkPlugins={[remarkGfm]}
+                              >
+                                {item.answer}
+                              </ReactMarkdown>
                             </div>
                           </div>
                         </div>

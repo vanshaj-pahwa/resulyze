@@ -43,20 +43,45 @@ const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, ini
 const generateFallbackAnswer = (question: string, category: string, tips: string[]) => {
   const tipsList = Array.isArray(tips) ? tips.join("\n- ") : "Follow the STAR method";
   
-  let fallbackAnswer = `I'd approach this ${category.toLowerCase()} question about "${question}" by following these key principles:\n\n`;
+  let fallbackAnswer = `## Approach to "${question}"\n\n`;
+  fallbackAnswer += `I'd approach this **${category.toLowerCase()}** question by following these key principles:\n\n`;
   
   // Add tips-based content
+  fallbackAnswer += `### Key Strategies\n\n`;
   fallbackAnswer += `The most important strategies for this question are:\n- ${tipsList}\n\n`;
   
   if (category === "Technical") {
-    fallbackAnswer += "I would structure my answer by first explaining my understanding of the technical concept, then sharing a specific example from my experience, and finally connecting it to how I'd apply this skill in the role.\n\n";
+    fallbackAnswer += "### My Technical Approach\n\n";
+    fallbackAnswer += "I would structure my answer by:\n\n";
+    fallbackAnswer += "1. **Conceptual understanding** - First explaining my understanding of the technical concept\n";
+    fallbackAnswer += "2. **Practical experience** - Sharing a specific example from my experience\n";
+    fallbackAnswer += "3. **Application** - Connecting it to how I'd apply this skill in the role\n\n";
+    
+    // Add a simple code example if it's a technical question
+    if (question.toLowerCase().includes('javascript') || question.toLowerCase().includes('js')) {
+      fallbackAnswer += "For example, if implementing a solution:\n\n";
+      fallbackAnswer += "```javascript\n// A simple implementation example\nfunction example() {\n  const result = someLogic();\n  return result;\n}\n```\n\n";
+    }
   } else if (category === "Behavioral") {
-    fallbackAnswer += "For this behavioral question, I'd use the STAR method: describing the Situation, the Task required, the Actions I took, and the Results achieved.\n\n";
+    fallbackAnswer += "### STAR Method Approach\n\n";
+    fallbackAnswer += "For this behavioral question, I'd use the STAR method:\n\n";
+    fallbackAnswer += "* **Situation**: Describe the context and background\n";
+    fallbackAnswer += "* **Task**: Explain what was required of me\n";
+    fallbackAnswer += "* **Action**: Detail the specific steps I took\n";
+    fallbackAnswer += "* **Result**: Share the outcomes and what I learned\n\n";
   } else if (category === "Experience") {
-    fallbackAnswer += "I'd highlight relevant past experiences, quantify my achievements where possible, and connect my experience directly to the requirements of this position.\n\n";
+    fallbackAnswer += "### Highlighting Relevant Experience\n\n";
+    fallbackAnswer += "I would focus on:\n\n";
+    fallbackAnswer += "* **Relevant accomplishments** from my past roles\n";
+    fallbackAnswer += "* **Quantified achievements** with metrics where possible (e.g., improved efficiency by 20%)\n";
+    fallbackAnswer += "* **Direct connections** between my experience and this position's requirements\n\n";
   }
   
-  fallbackAnswer += "Finally, I'd make sure to be concise while still being comprehensive, maintain a positive tone, and focus on relevant skills and experiences that match the job requirements.";
+  fallbackAnswer += "### Final Considerations\n\n";
+  fallbackAnswer += "I'd make sure to:\n\n";
+  fallbackAnswer += "* Be **concise yet comprehensive**\n";
+  fallbackAnswer += "* Maintain a **positive tone**\n";
+  fallbackAnswer += "* Focus on **relevant skills and experiences** that match the job requirements";
   
   return fallbackAnswer;
 };
@@ -126,10 +151,24 @@ export async function POST(request: NextRequest) {
     - Required Skills: ${Array.isArray(requiredSkillsArray) ? requiredSkillsArray.join(', ') : 'N/A'}
 
     Format the answer in first person as if the candidate is speaking.
-    For Technical questions: Include specific examples from the candidate's experience and relate to required job skills **and** if the question invites code, include code snippets that illustrates the point.
-    If the category is Technical/Problem-Solving/DSA and the question invites implementation, include a **brief, runnable code or config snippet** that illustrates the key idea.
-    For Behavioral questions: Use the STAR method (Situation, Task, Action, Result).
-    For Experience questions: Highlight relevant accomplishments and quantify achievements when possible.
+    
+    OUTPUT FORMATTING REQUIREMENTS:
+    1. Use proper Markdown formatting for readability
+    2. Use **bold text** for important points and key concepts
+    3. Use *italics* for emphasis
+    4. Use ordered lists (1., 2., 3.) for sequential steps or processes
+    5. Use unordered lists (•) for related points and examples
+    6. For technical questions with code, place code snippets in proper markdown code blocks with syntax highlighting: \`\`\`language\ncode here\n\`\`\`
+    7. Use clear paragraph breaks between different parts of the answer
+    8. Use headings (### or ####) to organize longer answers with clear sections
+    9. If referring to multiple points, use numbered lists
+    10. If mentioning the STAR method, clearly label each section: **Situation**, **Task**, **Action**, **Result**
+
+    CONTENT REQUIREMENTS:
+    - For Technical questions: Include specific examples from the candidate's experience and relate to required job skills AND if the question invites code, include formatted code snippets that illustrate the point.
+    - If the category is Technical/Problem-Solving/DSA and the question invites implementation, include a **brief, runnable code or config snippet** that illustrates the key idea.
+    - For Behavioral questions: Use the STAR method (Situation, Task, Action, Result).
+    - For Experience questions: Highlight relevant accomplishments and quantify achievements when possible.
     
     The answer should be professional, confident, and directly address the question while incorporating the tips provided.
     Keep the answer concise but comprehensive, around 3-5 paragraphs.

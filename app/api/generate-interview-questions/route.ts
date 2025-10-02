@@ -205,9 +205,15 @@ ${roundDetails ? 'Focus precisely on the technical skills, concepts, and scenari
 Include a mix of theoretical questions and practical coding or problem-solving scenarios that would be relevant to assess the candidate's abilities.
 
 For each question, provide:
-- The question text (make it detailed and specific)
+- The question text (make it detailed and specific, use markdown formatting with bold headers and bullet points for clarity)
 - Category (Technical, Behavioral, Experience, Company, Problem Solving)
-- 2-3 detailed tips for answering effectively that demonstrate deep understanding`
+- 2-3 detailed tips for answering effectively that demonstrate deep understanding, using proper markdown formatting for clarity
+
+FORMATTING INSTRUCTIONS:
+1. Format question text with clear markdown structure
+2. Use **bold text** for important concepts, keywords, and section headings
+3. Use bullet points or numbered lists for multi-part questions
+4. For questions about code, include well-formatted code examples with proper markdown syntax highlighting where appropriate`
       : `Generate comprehensive interview questions for a candidate based on their resume and the job they're applying for.
 
 Job Information:
@@ -231,9 +237,15 @@ Generate 8-10 in-depth, challenging interview questions across different categor
 5. Problem-solving scenarios - Realistic technical challenges that might be encountered in this role
 
 For each question, provide:
-- The question text
+- The question text (make it detailed and specific, use markdown formatting with bold headers and bullet points for clarity)
 - Category (Technical, Behavioral, Experience, Company, Problem Solving)
-- 2-3 tips for answering effectively`;
+- 2-3 detailed tips for answering effectively, using proper markdown formatting for clarity
+
+FORMATTING INSTRUCTIONS:
+1. Format question text with clear markdown structure
+2. Use **bold text** for important concepts, keywords, and section headings
+3. Use bullet points or numbered lists for multi-part questions
+4. For questions about code, include well-formatted code examples with proper markdown syntax highlighting where appropriate`;
 
     // Add the JSON format request to the prompt
     promptText += `
