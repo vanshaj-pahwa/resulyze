@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, RefreshCw, MessageSquare, ChevronUp, ChevronDown, Building, Users, Briefcase, ArrowRight } from 'lucide-react'
 
 interface InterviewPrepProps {
@@ -37,7 +36,6 @@ interface CompanyResearch {
 export default function InterviewPrep({ jobData, resumeData }: Readonly<InterviewPrepProps>) {
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
-  const [activeTab, setActiveTab] = useState('company')
   const [companyResearch, setCompanyResearch] = useState<CompanyResearch | null>(null)
   const [isResearchLoading, setIsResearchLoading] = useState(false)
   const [roundSpecificQuestions, setRoundSpecificQuestions] = useState<{[key: string]: InterviewQuestion[]}>({})
@@ -134,8 +132,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
         [roundName]: questionsWithAnswerProps
       }));
       
-      // Switch to the rounds tab to show the questions
-      setActiveTab('rounds');
+      // Round-specific questions have been generated
       
     } catch (error) {
       console.error(`Error generating questions for ${roundName}:`, error);
@@ -390,192 +387,70 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
         </div>
       </div>
       
-      {/* Tabs for different interview preparation sections */}
-      <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3">
-          <TabsTrigger value="general">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">General Questions</span>
-            <span className="inline sm:hidden">Questions</span>
-          </TabsTrigger>
-          <TabsTrigger value="company">
-            <Building className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Company Research</span>
-            <span className="inline sm:hidden">Company</span>
-          </TabsTrigger>
-          <TabsTrigger value="rounds">
-            <Briefcase className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Interview Rounds</span>
-            <span className="inline sm:hidden">Rounds</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Direct display of content without tabs */}
+      <div className="space-y-8">
         
-        <TabsContent value="general" className="mt-6">
-          {questions.length > 0 && (
-            <div className="space-y-4">
-              {questions.map((item, index) => (
-                <Card key={`question-${index}-${item.question?.substring(0, 15)}`} className="border border-gray-200 hover:border-blue-200 transition-all shadow-sm hover:shadow-md rounded-xl overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-gray-50 pb-4">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg text-gray-800 font-medium">{item.question}</CardTitle>
-                      <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm`}>
-                        {item.category}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div>
-                      <h4 className="font-semibold mb-3 text-sm flex items-center">
-                        <div className="bg-blue-600 rounded-full w-2 h-2 mr-2"></div>
-                        Tips for answering:
-                      </h4>
-                      <ul className="space-y-2 ml-1">
-                        {item.tips.map((tip, tipIndex) => (
-                          <li key={tipIndex} className="text-sm text-gray-600 flex items-start">
-                            <span className="text-blue-500 mr-2 font-bold">•</span>
-                            {tip}
-                          </li>
-                        ))}
-                      </ul>
-                      
-                      {/* Redesigned Answer section */}
-                      {item.answer && item.showAnswer && (
-                        <div className="mt-6 border-t pt-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center">
-                              <div className="bg-green-600 rounded-full w-2 h-2 mr-2"></div>
-                              <h4 className="font-semibold text-sm bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent">AI-Generated Answer</h4>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => toggleShowAnswer(index)}
-                              className="h-8 px-2 hover:bg-green-50"
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                              <span className="ml-1">Hide</span>
-                            </Button>
-                          </div>
-                          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg shadow-sm border border-green-100 text-gray-800">
-                            <div className="prose prose-sm max-w-none">
-                              {item.answer.split('\n').map((paragraph, pIndex) => (
-                                <p key={pIndex} className={`${pIndex > 0 ? 'mt-3' : ''} leading-relaxed`}>
-                                  {paragraph}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between pt-3">
-                    {item.answer && !item.showAnswer ? (
-                      <Button 
-                        variant="outline" 
-                        onClick={() => toggleShowAnswer(index)}
-                        className="text-green-700 border-green-200 hover:bg-green-50 hover:border-green-300 shadow-sm transition-all duration-200 transform hover:-translate-y-0.5"
-                      >
-                        <ChevronDown className="w-4 h-4 mr-2" />
-                        <span className="bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent font-medium">View Answer</span>
-                      </Button>
-                    ) : !item.answer && (
-                      <Button 
-                        onClick={() => generateAnswer(index)}
-                        disabled={item.isGeneratingAnswer}
-                        className={`${item.isGeneratingAnswer ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700'} text-white shadow-sm transition-all duration-200 transform hover:-translate-y-0.5`}
-                      >
-                        {item.isGeneratingAnswer ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            <span className="text-blue-700">Generating...</span>
-                          </>
-                        ) : (
-                          <>
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Generate Answer
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {questions.length === 0 && !isGenerating && (
-            <Card className="border border-dashed border-blue-200 bg-blue-50/50">
-              <CardContent className="text-center py-16">
-                <div className="text-gray-600">
-                  <div className="bg-white p-4 rounded-full w-20 h-20 mx-auto mb-6 shadow-sm flex items-center justify-center">
-                    <RefreshCw className="w-10 h-10 text-blue-500 opacity-80" />
-                  </div>
-                  <p className="font-medium text-blue-800">Generate interview questions to start preparing</p>
-                  <p className="text-sm mt-3 max-w-md mx-auto text-gray-500">
-                    Questions will be tailored based on your resume and the job requirements. You'll also be able to get AI-generated answer suggestions for each question.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="company" className="mt-6">
-          {!companyResearch && !isResearchLoading && (
+        {/* Company Research Section */}
+        <div className="mt-6">
+          <div className="flex items-center mb-4">
+            <Building className="w-5 h-5 text-purple-600 mr-2" />
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-700 to-blue-700 bg-clip-text text-transparent">Company Research</h3>
+          </div>
+          
+          {!companyResearch && !isResearchLoading ? (
             <Card className="border border-dashed border-purple-200 bg-purple-50/50">
-              <CardContent className="text-center py-16">
+              <CardContent className="text-center py-8">
                 <div className="text-gray-600">
-                  <div className="bg-white p-4 rounded-full w-20 h-20 mx-auto mb-6 shadow-sm flex items-center justify-center">
-                    <Building className="w-10 h-10 text-purple-500 opacity-80" />
+                  <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
+                    <Building className="w-8 h-8 text-purple-500 opacity-80" />
                   </div>
                   <p className="font-medium text-purple-800">Research the company to prepare for your interview</p>
-                  <p className="text-sm mt-3 max-w-md mx-auto text-gray-500">
+                  <p className="text-sm mt-2 max-w-md mx-auto text-gray-500">
                     Get insights about {jobData?.company || 'the company'}, its culture, and what to expect during the interview process.
                   </p>
                 </div>
               </CardContent>
             </Card>
-          )}
-          
-          {companyResearch && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
-                  <CardTitle className="text-lg font-medium">
-                    About {jobData?.company || 'the company'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="prose prose-sm max-w-none">
-                    {companyResearch.companyOverview.split('\n').map((paragraph, index) => (
-                      <p key={index} className={index > 0 ? 'mt-3' : ''}>{paragraph}</p>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
+          ) : companyResearch ? (
+            <Card>
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+                <CardTitle className="text-lg font-medium">
+                  About {jobData?.company || 'the company'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="prose prose-sm max-w-none">
+                  {companyResearch.companyOverview.split('\n').map((paragraph, index) => (
+                    <p key={index} className={index > 0 ? 'mt-3' : ''}>{paragraph}</p>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
         
-        <TabsContent value="rounds" className="mt-6">
-          {!companyResearch?.interviewProcess && !isResearchLoading && (
+        {/* Interview Rounds Section */}
+        <div className="mt-8">
+          <div className="flex items-center mb-4">
+            <Briefcase className="w-5 h-5 text-blue-600 mr-2" />
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent">Interview Rounds</h3>
+          </div>
+          
+          {!companyResearch?.interviewProcess && !isResearchLoading ? (
             <Card className="border border-dashed border-blue-200 bg-blue-50/50">
-              <CardContent className="text-center py-16">
+              <CardContent className="text-center py-8">
                 <div className="text-gray-600">
-                  <div className="bg-white p-4 rounded-full w-20 h-20 mx-auto mb-6 shadow-sm flex items-center justify-center">
-                    <Briefcase className="w-10 h-10 text-blue-500 opacity-80" />
+                  <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
+                    <Briefcase className="w-8 h-8 text-blue-500 opacity-80" />
                   </div>
                   <p className="font-medium text-blue-800">Research the company first to see interview stages</p>
-                  <p className="text-sm mt-3 max-w-md mx-auto text-gray-500">
-                    Click the "Research Company" button to learn about {jobData?.company || 'the company'}'s interview process.
+                  <p className="text-sm mt-2 max-w-md mx-auto text-gray-500">
+                    Wait for the company research to complete to learn about {jobData?.company || 'the company'}'s interview process.
                   </p>
                 </div>
               </CardContent>
             </Card>
-          )}
-          
-          {companyResearch?.interviewProcess && (
+          ) : companyResearch?.interviewProcess ? (
             <div className="space-y-8">
               {companyResearch.interviewProcess.map((round, index) => (
                 <Card key={`round-${index}`} className="border border-blue-100 hover:border-blue-200 transition-all">
@@ -734,118 +609,126 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                 </Card>
               ))}
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {questions.length > 0 && (
-        <div className="space-y-4">
-          {questions.map((item, index) => (
-            <Card key={`question-${index}-${item.question?.substring(0, 15)}`} className="border border-gray-200 hover:border-blue-200 transition-all shadow-sm hover:shadow-md rounded-xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-gray-50 pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg text-gray-800 font-medium">{item.question}</CardTitle>
-                  <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm`}>
-                    {item.category}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div>
-                  <h4 className="font-semibold mb-3 text-sm flex items-center">
-                    <div className="bg-blue-600 rounded-full w-2 h-2 mr-2"></div>
-                    Tips for answering:
-                  </h4>
-                  <ul className="space-y-2 ml-1">
-                    {item.tips.map((tip, tipIndex) => (
-                      <li key={tipIndex} className="text-sm text-gray-600 flex items-start">
-                        <span className="text-blue-500 mr-2 font-bold">•</span>
-                        {tip}
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  {/* Redesigned Answer section */}
-                  {item.answer && item.showAnswer && (
-                    <div className="mt-6 border-t pt-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center">
-                          <div className="bg-green-600 rounded-full w-2 h-2 mr-2"></div>
-                          <h4 className="font-semibold text-sm bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent">AI-Generated Answer</h4>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => toggleShowAnswer(index)}
-                          className="h-8 px-2 hover:bg-green-50"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                          <span className="ml-1">Hide</span>
-                        </Button>
-                      </div>
-                      <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg shadow-sm border border-green-100 text-gray-800">
-                        <div className="prose prose-sm max-w-none">
-                          {item.answer.split('\n').map((paragraph, pIndex) => (
-                            <p key={pIndex} className={`${pIndex > 0 ? 'mt-3' : ''} leading-relaxed`}>
-                              {paragraph}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
+          ) : null}
+        </div>
+        
+        {/* General Questions Section */}
+        <div className="mt-8">
+          <div className="flex items-center mb-4">
+            <MessageSquare className="w-5 h-5 text-green-600 mr-2" />
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-green-700 to-blue-700 bg-clip-text text-transparent">General Questions</h3>
+          </div>
+          
+          {questions.length > 0 && (
+            <div className="space-y-4">
+              {questions.map((item, index) => (
+                <Card key={`question-${index}-${item.question?.substring(0, 15)}`} className="border border-gray-200 hover:border-blue-200 transition-all shadow-sm hover:shadow-md rounded-xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-gray-50 pb-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg text-gray-800 font-medium">{item.question}</CardTitle>
+                      <Badge className={`${getCategoryColor(item.category)} font-medium shadow-sm`}>
+                        {item.category}
+                      </Badge>
                     </div>
-                  )}
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div>
+                      <h4 className="font-semibold mb-3 text-sm flex items-center">
+                        <div className="bg-blue-600 rounded-full w-2 h-2 mr-2"></div>
+                        Tips for answering:
+                      </h4>
+                      <ul className="space-y-2 ml-1">
+                        {item.tips.map((tip, tipIndex) => (
+                          <li key={tipIndex} className="text-sm text-gray-600 flex items-start">
+                            <span className="text-blue-500 mr-2 font-bold">•</span>
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                      
+                      {/* Redesigned Answer section */}
+                      {item.answer && item.showAnswer && (
+                        <div className="mt-6 border-t pt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <div className="bg-green-600 rounded-full w-2 h-2 mr-2"></div>
+                              <h4 className="font-semibold text-sm bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent">AI-Generated Answer</h4>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => toggleShowAnswer(index)}
+                              className="h-8 px-2 hover:bg-green-50"
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                              <span className="ml-1">Hide</span>
+                            </Button>
+                          </div>
+                          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg shadow-sm border border-green-100 text-gray-800">
+                            <div className="prose prose-sm max-w-none">
+                              {item.answer.split('\n').map((paragraph, pIndex) => (
+                                <p key={pIndex} className={`${pIndex > 0 ? 'mt-3' : ''} leading-relaxed`}>
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between pt-3">
+                    {item.answer && !item.showAnswer ? (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => toggleShowAnswer(index)}
+                        className="text-green-700 border-green-200 hover:bg-green-50 hover:border-green-300 shadow-sm transition-all duration-200 transform hover:-translate-y-0.5"
+                      >
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        <span className="bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent font-medium">View Answer</span>
+                      </Button>
+                    ) : !item.answer && (
+                      <Button 
+                        onClick={() => generateAnswer(index)}
+                        disabled={item.isGeneratingAnswer}
+                        className={`${item.isGeneratingAnswer ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700'} text-white shadow-sm transition-all duration-200 transform hover:-translate-y-0.5`}
+                      >
+                        {item.isGeneratingAnswer ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <span className="text-blue-700">Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Generate Answer
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {questions.length === 0 && !isGenerating && (
+            <Card className="border border-dashed border-blue-200 bg-blue-50/50">
+              <CardContent className="text-center py-8">
+                <div className="text-gray-600">
+                  <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
+                    <RefreshCw className="w-8 h-8 text-blue-500 opacity-80" />
+                  </div>
+                  <p className="font-medium text-blue-800">Generate interview questions to start preparing</p>
+                  <p className="text-sm mt-2 max-w-md mx-auto text-gray-500">
+                    Questions will be tailored based on your resume and the job requirements.
+                  </p>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between pt-3">
-                {item.answer && !item.showAnswer ? (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => toggleShowAnswer(index)}
-                    className="text-green-700 border-green-200 hover:bg-green-50 hover:border-green-300 shadow-sm transition-all duration-200 transform hover:-translate-y-0.5"
-                  >
-                    <ChevronDown className="w-4 h-4 mr-2" />
-                    <span className="bg-gradient-to-r from-green-700 to-blue-600 bg-clip-text text-transparent font-medium">View Answer</span>
-                  </Button>
-                ) : !item.answer && (
-                  <Button 
-                    onClick={() => generateAnswer(index)}
-                    disabled={item.isGeneratingAnswer}
-                    className={`${item.isGeneratingAnswer ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700'} text-white shadow-sm transition-all duration-200 transform hover:-translate-y-0.5`}
-                  >
-                    {item.isGeneratingAnswer ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        <span className="text-blue-700">Generating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Generate Answer
-                      </>
-                    )}
-                  </Button>
-                )}
-              </CardFooter>
             </Card>
-          ))}
+          )}
         </div>
-      )}
-
-      {questions.length === 0 && !isGenerating && (
-        <Card className="border border-dashed border-blue-200 bg-blue-50/50">
-          <CardContent className="text-center py-16">
-            <div className="text-gray-600">
-              <div className="bg-white p-4 rounded-full w-20 h-20 mx-auto mb-6 shadow-sm flex items-center justify-center">
-                <RefreshCw className="w-10 h-10 text-blue-500 opacity-80" />
-              </div>
-              <p className="font-medium text-blue-800">Generate interview questions to start preparing</p>
-              <p className="text-sm mt-3 max-w-md mx-auto text-gray-500">
-                Questions will be tailored based on your resume and the job requirements. You'll also be able to get AI-generated answer suggestions for each question.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      </div>
     </div>
   )
 }
