@@ -4,13 +4,25 @@
  */
 import { getAuthToken, clearAuthToken } from './auth';
 
+// For client-side use only
+let apiLoader: {
+  startLoading: () => void;
+  stopLoading: () => void;
+} | null = null;
+
+// Function to set the API loader instance
+export const setApiLoader = (loader: { startLoading: () => void; stopLoading: () => void }) => {
+  apiLoader = loader;
+};
+
 /**
  * Make an authenticated API request
  * @param url The API endpoint to call
  * @param options Request options including method, body, etc.
+ * @param showLoader Whether to show the global loader (defaults to true)
  * @returns Response from the API
  */
-export async function fetchWithAuth(url: string, options: RequestInit = {}) {
+export async function fetchWithAuth(url: string, options: RequestInit = {}, showLoader = true) {
   // Get auth token if available
   const authToken = getAuthToken() || '';
 
@@ -29,6 +41,11 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     headers,
     credentials: 'include',
   };
+
+  // Show loader if requested and available
+  if (showLoader && typeof window !== 'undefined' && apiLoader) {
+    apiLoader.startLoading();
+  }
 
   try {
     const response = await fetch(url, fetchOptions);
@@ -51,5 +68,10 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   } catch (error) {
     console.error('API request failed:', error);
     throw error;
+  } finally {
+    // Hide loader if it was shown
+    if (showLoader && typeof window !== 'undefined' && apiLoader) {
+      apiLoader.stopLoading();
+    }
   }
 }

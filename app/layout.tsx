@@ -4,6 +4,7 @@ import './globals.css'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { ClerkSessionProvider } from '@/components/auth/ClerkSessionProvider'
+import { ApiLoaderProvider } from '@/components/ui/api-loader'
 
 // Font configuration
 const inter = Inter({ 
@@ -55,11 +56,13 @@ export default function RootLayout({
         <body className="min-h-screen bg-gray-50 font-sans antialiased">
           <div className="flex min-h-screen flex-col">
             <ClerkSessionProvider>
-              <Navbar />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
+              <ApiLoaderProvider>
+                <Navbar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+              </ApiLoaderProvider>
             </ClerkSessionProvider>
           </div>
         </body>

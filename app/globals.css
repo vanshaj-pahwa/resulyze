@@ -378,3 +378,147 @@ ul .prose ol {
     min-height: 100vh;
   }
 }
+
+/* Logo fill animation for API loader */
+@keyframes fillUp {
+  0% {
+    transform: translateY(-100%);
+  }
+  45% {
+    transform: translateY(-50%);
+  }
+  75% {
+    transform: translateY(-15%);
+  }
+  100% {
+    transform: translateY(0%);
+  }
+}
+
+@keyframes pulseBorder {
+  0%, 100% {
+    stroke-opacity: 0.8;
+    stroke-width: 1.5;
+  }
+  50% {
+    stroke-opacity: 1;
+    stroke-width: 2.5;
+  }
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fillReveal {
+  0%, 50% {
+    fill-opacity: 0;
+  }
+  100% {
+    fill-opacity: 1;
+  }
+}
+
+.animate-fill-up {
+  animation: fillUp 2.5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+}
+
+.animate-pulse-border {
+  animation: pulseBorder 2.5s ease-in-out 0.5s infinite;
+}
+
+.animate-text-fade {
+  animation: fadeInOut 2.5s ease-in-out infinite;
+}
+
+.animate-fill-reveal {
+  animation: fillReveal 2.5s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+
+@keyframes drawPath {
+  0% {
+    stroke-dashoffset: 600;
+    opacity: 0.4;
+    stroke-width: 3;
+  }
+  60% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    stroke-width: 5;
+  }
+  80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    stroke-width: 5.5;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    stroke-width: 5;
+  }
+}
+
+@keyframes fillAppear {
+  0%, 60% {
+    fill-opacity: 0;
+  }
+  100% {
+    fill-opacity: 0.2;
+  }
+}
+
+.animate-draw-path {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: drawPath 3s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+
+.animate-fill-appear {
+  animation: fillAppear 3s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes lettermarkSpin {
+  0% {
+    stroke-dasharray: 0 300;
+    stroke-dashoffset: 0;
+    opacity: 0.8;
+  }
+  45% {
+    stroke-dasharray: 150 150;
+    opacity: 1;
+    stroke-width: 2;
+  }
+  90%, 100% {
+    stroke-dasharray: 300 0;
+    stroke-dashoffset: -300;
+    opacity: 0.8;
+    stroke-width: 1.5;
+  }
+}
+
+.animate-lettermark-spinner {
+  paint-order: stroke;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 0;
+  animation: lettermarkSpin 2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
