@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -187,7 +188,7 @@ export default function ResumeBuilder({
       if (!user) return;
 
       try {
-        const response = await fetch("/api/user/resume");
+        const response = await fetchWithAuth("/api/user/resume");
         if (response.ok) {
           const result = await response.json();
           if (result && !result.error) {
@@ -269,9 +270,8 @@ export default function ResumeBuilder({
 
       setIsSaving(true);
       try {
-        const response = await fetch("/api/user/resume", {
+        const response = await fetchWithAuth("/api/user/resume", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
 
@@ -359,9 +359,8 @@ export default function ResumeBuilder({
 
     setIsOptimizing(true);
     try {
-      const response = await fetch("/api/optimize-resume", {
+      const response = await fetchWithAuth("/api/optimize-resume", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeData, jobData }),
       });
 
@@ -405,9 +404,8 @@ export default function ResumeBuilder({
 
     setIsCalculatingATS(true);
     try {
-      const response = await fetch("/api/calculate-ats-score", {
+      const response = await fetchWithAuth("/api/calculate-ats-score", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobData, resumeData }),
       });
 
@@ -463,6 +461,112 @@ export default function ResumeBuilder({
     await optimizeResume();
     if (atsData) {
       await calculateATSScore();
+    }
+  };
+
+  const completeChecklistWithAI = async () => {
+    if (!atsData?.improvementChecklist || !resumeData) {
+      showAlert('warning', 'Missing Information', 'Please calculate ATS score first to get a checklist.');
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const response = await fetchWithAuth("/api/optimize-resume", {
+        method: "POST",
+        body: JSON.stringify({ 
+          resumeData, 
+          jobData,
+          improvementChecklist: atsData.improvementChecklist,
+          optimizationMode: "checklist"
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const optimizedData = await response.json();
+      
+      // Save the optimized resume to the database
+      await saveResumeData(optimizedData);
+      
+      // Update the state
+      setResumeData(optimizedData);
+      
+      // Recalculate ATS score
+      await calculateATSScore();
+      
+      // Show success message
+      showAlert(
+        'success',
+        'Checklist Items Completed!',
+        'Your resume has been updated to address the checklist items.',
+        'Please review the changes and further customize if needed.'
+      );
+    } catch (error) {
+      console.error("Error completing checklist:", error);
+      showAlert(
+        'error',
+        'Process Failed',
+        'Failed to complete the checklist items.',
+        'Please try again or address the items manually.'
+      );
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const addMissingSkillsWithAI = async () => {
+    if (!atsData?.keywordAnalysis?.missingSkills || !resumeData) {
+      showAlert('warning', 'Missing Information', 'Please calculate ATS score first to identify missing skills.');
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const response = await fetchWithAuth("/api/optimize-resume", {
+        method: "POST",
+        body: JSON.stringify({ 
+          resumeData, 
+          jobData,
+          missingSkills: atsData.keywordAnalysis.missingSkills,
+          optimizationMode: "skills"
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const optimizedData = await response.json();
+      
+      // Save the optimized resume to the database
+      await saveResumeData(optimizedData);
+      
+      // Update the state
+      setResumeData(optimizedData);
+      
+      // Recalculate ATS score
+      await calculateATSScore();
+      
+      // Show success message
+      showAlert(
+        'success',
+        'Skills Added/Improved!',
+        'Your resume has been updated to include missing skills.',
+        'Please review the changes to ensure they accurately reflect your experience.'
+      );
+    } catch (error) {
+      console.error("Error adding missing skills:", error);
+      showAlert(
+        'error',
+        'Process Failed',
+        'Failed to add missing skills to your resume.',
+        'Please try again or add the skills manually.'
+      );
+    } finally {
+      setIsOptimizing(false);
     }
   };
 
@@ -1428,6 +1532,8 @@ export default function ResumeBuilder({
                 resumeData={resumeData}
                 atsData={atsData}
                 onImproveWithAI={improveWithAI}
+                onCompleteChecklist={completeChecklistWithAI}
+                onAddMissingSkills={addMissingSkillsWithAI}
               />
             </TabsContent>
           </Tabs>

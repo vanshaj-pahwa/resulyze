@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, AlertTriangle, Target, TrendingUp, X, Check, Clock, Eye, BarChart3, Info } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Target, TrendingUp, X, Check, Clock, Eye, BarChart3, Info, Plus } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ATSScoreProps {
@@ -13,9 +13,11 @@ interface ATSScoreProps {
     readonly resumeData: any
     readonly atsData: any
     readonly onImproveWithAI: () => void
+    readonly onCompleteChecklist?: () => void
+    readonly onAddMissingSkills?: () => void
 }
 
-export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI }: Readonly<ATSScoreProps>) {
+export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI, onCompleteChecklist, onAddMissingSkills }: Readonly<ATSScoreProps>) {
     const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
 
     const getScoreColor = (score: number) => {
@@ -105,7 +107,12 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                         <TooltipTrigger asChild>
                                             <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
                                         </TooltipTrigger>
-                                        <TooltipContent className="max-w-sm p-3 bg-white border shadow-lg z-50">
+                                        <TooltipContent 
+                                            className="max-w-sm p-3 bg-white border shadow-lg z-[9999]"
+                                            side="top"
+                                            sideOffset={5}
+                                            align="center"
+                                        >
                                             <div className="space-y-2 text-xs">
                                                 <div className="font-semibold text-gray-900 mb-2">Overall score breakdown:</div>
                                                 <div className="space-y-1">
@@ -205,7 +212,12 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                             <TooltipTrigger asChild>
                                                 <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
                                             </TooltipTrigger>
-                                            <TooltipContent className="max-w-sm p-3 bg-white border shadow-lg z-50">
+                                            <TooltipContent 
+                                                className="max-w-sm p-3 bg-white border shadow-lg z-[9999]"
+                                                side="top"
+                                                sideOffset={5}
+                                                align="center"
+                                            >
                                                 <div className="space-y-2 text-xs">
                                                     <div className="font-semibold text-gray-900 mb-2">Keyword matching process:</div>
                                                     <div className="space-y-1">
@@ -261,6 +273,15 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                                 </Badge>
                                             )}
                                         </div>
+                                        {onAddMissingSkills && (
+                                            <Button 
+                                                onClick={onAddMissingSkills}
+                                                className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                Add/Improve Skills with AI
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>
@@ -299,10 +320,21 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                         </div>
                                     ))}
                                 </div>
-                                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-sm text-blue-800">
-                                        <strong>Progress:</strong> {checkedItems.size} of {atsData.improvementChecklist.length} items completed
-                                    </p>
+                                <div className="mt-4 space-y-3">
+                                    <div className="p-3 bg-blue-50 rounded-lg">
+                                        <p className="text-sm text-blue-800">
+                                            <strong>Progress:</strong> {checkedItems.size} of {atsData.improvementChecklist.length} items completed
+                                        </p>
+                                    </div>
+                                    {onCompleteChecklist && (
+                                        <Button 
+                                            onClick={onCompleteChecklist}
+                                            className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+                                        >
+                                            <CheckCircle className="w-4 h-4" />
+                                            Complete Checklist with AI
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -320,7 +352,12 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                                             <TooltipTrigger asChild>
                                                 <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
                                             </TooltipTrigger>
-                                            <TooltipContent className="max-w-sm p-3 bg-white border shadow-lg z-50">
+                                            <TooltipContent 
+                                                className="max-w-sm p-3 bg-white border shadow-lg z-[9999]"
+                                                side="top"
+                                                sideOffset={5}
+                                                align="center"
+                                            >
                                                 <div className="space-y-2 text-xs">
                                                     <div className="font-semibold text-gray-900 mb-2">How this score is calculated:</div>
                                                     <div className="space-y-1">
@@ -354,15 +391,6 @@ export default function ATSScore({ jobData, resumeData, atsData, onImproveWithAI
                             </CardContent>
                         </Card>
                     )}
-
-                    <Button
-                        onClick={onImproveWithAI}
-                        className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                    >
-                        <TrendingUp className="w-4 h-4 mr-2" />
-                        Improve with AI
-                    </Button>
-
                 </div>
             )}
 

@@ -25,6 +25,7 @@ export function ClerkSessionProvider({ children }: { children: React.ReactNode }
         const token = await getToken({ template: 'long_token' });
         if (token) {
           setAuthToken(token);
+          console.log('Long-lived token successfully stored');
         } else {
           console.warn('No auth token received from Clerk');
         }

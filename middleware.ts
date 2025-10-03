@@ -7,13 +7,17 @@ export default authMiddleware({
     '/sign-in(.*)',
     '/sign-up(.*)',
     '/api/webhooks(.*)',
-    '/api/health(.*)'
+    '/api/health(.*)',
+    '/api/calculate-ats-score(.*)',
+    '/api/optimize-resume(.*)'
   ],
   // Routes that can always be accessed, and have
   // no authentication information
   ignoredRoutes: [
     '/api/webhooks(.*)',
-    '/api/health(.*)'
+    '/api/health(.*)',
+    '/api/calculate-ats-score(.*)',
+    '/api/optimize-resume(.*)'
   ]
 })
 

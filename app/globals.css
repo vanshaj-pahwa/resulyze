@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure tooltips are properly positioned */
+.tooltip-portal {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
