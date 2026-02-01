@@ -7,6 +7,37 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to attempt API call with retries
+const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, initialDelay = 1000) => {
+  let lastError;
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (error: any) {
+      lastError = error;
+      
+      console.log(`Attempt ${retries + 1} failed:`, error.message);
+      
+      // Retry on server errors (5xx) or rate limiting (429)
+      if ((error.status >= 500 && error.status < 600) || error.status === 429) {
+        console.log(`Retrying in ${initialDelay * Math.pow(2, retries)}ms...`);
+        await delay(initialDelay * Math.pow(2, retries));
+        retries++;
+      } else {
+        throw error;
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -116,30 +147,62 @@ export async function POST(request: NextRequest) {
         `
     }
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
-
-    // Clean up the response to ensure it's valid JSON
-    const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim()
-    
     try {
-      const optimizedData = JSON.parse(cleanedText)
-      return NextResponse.json(optimizedData)
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
-      console.error('Raw response:', text)
-      // Return original data if parsing fails with an error message
-      return NextResponse.json({
-        ...resumeData,
-        error: 'Failed to parse AI response properly. Your data was not modified.',
-        _debugInfo: {
-          parseError: parseError instanceof Error ? parseError.message : 'Unknown parsing error',
-          responsePreview: text.substring(0, 200) + '...' // First 200 chars for debugging
+      const result = await generateWithRetry(model, prompt)
+      
+      // Clean up the response to ensure it's valid JSON
+      const cleanedText = result.replace(/```json\n?|\n?```/g, '').trim()
+      
+      try {
+        const optimizedData = JSON.parse(cleanedText)
+        return NextResponse.json(optimizedData)
+      } catch (parseError) {
+        console.error('JSON parsing error:', parseError)
+        console.error('Raw response:', result)
+        // Return original data if parsing fails
+        return NextResponse.json({
+          ...resumeData,
+          error: 'Failed to parse AI response. Your data was not modified.'
+        })
+      }
+    } catch (generationError: any) {
+      console.error('Model generation failed:', generationError.message);
+      
+      // Try fallback to gemini-2.0-flash
+      try {
+        console.log('Trying gemini-2.0-flash as fallback...');
+        const fallbackModel = genAI.getGenerativeModel({ 
+          model: 'gemini-2.0-flash',
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 4096,
+          }
+        });
+        
+        const fallbackResult = await generateWithRetry(fallbackModel, prompt)
+        const fallbackCleanedText = fallbackResult.replace(/```json\n?|\n?```/g, '').trim()
+        
+        try {
+          const optimizedData = JSON.parse(fallbackCleanedText)
+          return NextResponse.json(optimizedData)
+        } catch (parseError) {
+          return NextResponse.json({
+            ...resumeData,
+            error: 'Failed to parse AI response. Your data was not modified.'
+          })
         }
-      })
+      } catch (fallbackError: any) {
+        console.error('Fallback model also failed:', fallbackError.message);
+        
+        // Return original data with error message
+        return NextResponse.json({
+          ...resumeData,
+          error: 'AI service temporarily unavailable. Your resume was not modified.'
+        }, { status: 200 })
+      }
     }
-
   } catch (error) {
     console.error('Error optimizing resume:', error)
     return NextResponse.json(

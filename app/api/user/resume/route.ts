@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs'
 import { getStorageAdapter } from '@/lib/storage'
+
+const DEFAULT_USER_ID = 'default-user'
 
 export async function GET() {
   try {
-    const { userId } = auth()
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const userId = DEFAULT_USER_ID
 
     const storage = await getStorageAdapter()
     const resumeData = await storage.getResumeData(userId)
@@ -33,11 +30,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { userId } = auth()
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const userId = DEFAULT_USER_ID
 
     const resumeData = await request.json()
     

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { auth } from '@clerk/nextjs'
+
+const DEFAULT_USER_ID = 'default-user'
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY is not defined")
@@ -79,19 +80,6 @@ const generateFallbackResearch = (companyName: string) => {
 };
 
 export async function POST(request: NextRequest) {
-  // Get the user's session and verify authentication
-  const { userId } = auth();
-  
-  console.log('Company research API accessed, userId:', userId);
-  
-  if (!userId) {
-    console.log('No userId found, returning 401');
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
-  }
-
   try {
     const { companyName, jobTitle } = await request.json();
     

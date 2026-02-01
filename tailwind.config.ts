@@ -24,9 +24,9 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)'],
-        inter: ['var(--font-inter)'],
-        poppins: ['var(--font-poppins)'],
+        sans: ['var(--font-body)'],
+        heading: ['var(--font-heading)'],
+        body: ['var(--font-body)'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -89,22 +89,35 @@ const config: Config = {
         },
         "pulse-slow": {
           '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.8' },
+          '50%': { opacity: '0.7' },
         },
         "float": {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
-        }
+          '50%': { transform: 'translateY(-12px)' },
+        },
+        "fade-up": {
+          from: { opacity: '0', transform: 'translateY(24px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        "fade-in": {
+          from: { opacity: '0', transform: 'scale(0.97)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-slow": "pulse-slow 3s infinite ease-in-out",
-        "float": "float 4s infinite ease-in-out",
+        "float": "float 5s infinite ease-in-out",
+        "fade-up": "fade-up 0.7s ease-out forwards",
+        "fade-in": "fade-in 0.5s ease-out forwards",
       },
       boxShadow: {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
-      }
+        'glow-sm': '0 0 15px -3px rgba(99, 102, 241, 0.15)',
+        'glow-md': '0 0 30px -5px rgba(99, 102, 241, 0.2)',
+        'glow-lg': '0 0 50px -10px rgba(99, 102, 241, 0.25)',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

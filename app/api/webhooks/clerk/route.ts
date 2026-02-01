@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { Webhook } from 'svix'
-import { connectToDB } from '@/lib/mongodb'
-import { UserProfile } from '@/lib/models/User'
 
 const webhookSecret = process.env.CLERK_WEBHOOK_SECRET
 
@@ -49,53 +47,10 @@ export async function POST(request: NextRequest) {
 
   // Handle the webhook
   const eventType = evt.type
-  const { id, email_addresses, first_name, last_name } = evt.data
+  const { id } = evt.data
 
-  try {
-    // Try to use MongoDB, but don't fail if it's not available
-    try {
-      await connectToDB()
+  // Log the event (user data will be stored in localStorage on first app use)
+  console.log(`Clerk webhook received: ${eventType} for user ${id}`)
 
-      if (eventType === 'user.created') {
-        const newUser = new UserProfile({
-          userId: id,
-          email: email_addresses[0]?.email_address || '',
-          firstName: first_name || '',
-          lastName: last_name || '',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-
-        await newUser.save()
-        console.log('User created:', id)
-      }
-
-      if (eventType === 'user.updated') {
-        await UserProfile.findOneAndUpdate(
-          { userId: id },
-          {
-            email: email_addresses[0]?.email_address || '',
-            firstName: first_name || '',
-            lastName: last_name || '',
-            updatedAt: new Date()
-          },
-          { upsert: true }
-        )
-        console.log('User updated:', id)
-      }
-
-      if (eventType === 'user.deleted') {
-        await UserProfile.findOneAndDelete({ userId: id })
-        console.log('User deleted:', id)
-      }
-    } catch (dbError) {
-      console.warn('MongoDB not available for webhook, user data will be created on first app use:', dbError)
-    }
-
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Error handling webhook:', error)
-    // Still return success to avoid webhook retries
-    return NextResponse.json({ received: true, warning: 'Processed with fallback' })
-  }
+  return NextResponse.json({ received: true })
 }

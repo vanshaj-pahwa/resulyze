@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { auth } from '@clerk/nextjs'
+
+const DEFAULT_USER_ID = 'default-user'
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY is not defined")
@@ -23,13 +24,16 @@ const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, ini
     } catch (error: any) {
       lastError = error;
       
-      // If it's a model overload error (503), retry
-      if (error.message && error.message.includes("503") && error.message.includes("overloaded")) {
-        console.log(`Attempt ${retries + 1} failed, retrying in ${initialDelay * (retries + 1)}ms...`);
+      // Log the actual error for debugging
+      console.log(`Attempt ${retries + 1} failed:`, error.message);
+      
+      // Retry on server errors (5xx) or rate limiting (429)
+      if ((error.status >= 500 && error.status < 600) || error.status === 429) {
+        console.log(`Retrying in ${initialDelay * Math.pow(2, retries)}ms...`);
         await delay(initialDelay * Math.pow(2, retries)); // Exponential backoff
         retries++;
       } else {
-        // If it's another error, throw immediately
+        // For other errors (4xx, model not found, auth errors), throw immediately
         throw error;
       }
     }
@@ -87,19 +91,6 @@ const generateFallbackAnswer = (question: string, category: string, tips: string
 };
 
 export async function POST(request: NextRequest) {
-  // Get the user's session and verify authentication
-  const { userId } = auth();
-  
-  // Debug log to check if userId is being received
-  console.log('API route accessed, userId:', userId);
-  
-  if (!userId) {
-    console.log('No userId found, returning 401');
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
-  }
 
   try {
     const { question, category, tips, resumeData, jobData } = await request.json();
@@ -178,16 +169,32 @@ export async function POST(request: NextRequest) {
       // Try to generate answer with retries
       const answer = await generateWithRetry(model, prompt);
       return NextResponse.json({ answer });
-    } catch (generationError) {
-      console.error('All retries failed:', generationError);
+    } catch (generationError: any) {
+      console.error('gemini-3-flash-preview failed:', generationError.message);
       
-      // If generation fails after retries, use fallback
-      console.log('Using fallback answer generator');
-      const fallbackAnswer = generateFallbackAnswer(question, category, tips);
-      
-      // Add a note that this is a fallback response
-      const answer = `[Note: Generated using fallback system due to AI service limitations]\n\n${fallbackAnswer}`;
-      return NextResponse.json({ answer });
+      // Try fallback to gemini-2.0-flash if the preview model fails
+      try {
+        console.log('Trying gemini-2.0-flash as fallback...');
+        const fallbackModel = genAI.getGenerativeModel({ 
+          model: 'gemini-2.0-flash',
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 1024,
+          }
+        });
+        
+        const answer = await generateWithRetry(fallbackModel, prompt);
+        return NextResponse.json({ answer });
+      } catch (fallbackError: any) {
+        console.error('gemini-2.0-flash also failed:', fallbackError.message);
+        
+        // If both models fail, use local fallback generator
+        console.log('Using local fallback answer generator');
+        const fallbackAnswer = generateFallbackAnswer(question, category, tips);
+        return NextResponse.json({ answer: fallbackAnswer });
+      }
     }
   } catch (error: unknown) {
     console.error('Error generating interview answer:', error);

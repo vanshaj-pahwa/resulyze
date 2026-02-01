@@ -1,23 +1,21 @@
-import { ClerkProvider } from '@clerk/nextjs'
-import { Inter, Poppins } from 'next/font/google'
+import { Sora, DM_Sans } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { ClerkSessionProvider } from '@/components/auth/ClerkSessionProvider'
 import { ApiLoaderProvider } from '@/components/ui/api-loader'
 
-// Font configuration
-const inter = Inter({ 
+const sora = Sora({
   subsets: ['latin'],
-  variable: '--font-inter', 
-  display: 'swap'
+  variable: '--font-heading',
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800'],
 })
 
-const poppins = Poppins({ 
+const dmSans = DM_Sans({
   subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-poppins',
-  display: 'swap'
 })
 
 export const metadata = {
@@ -43,30 +41,26 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <link rel="icon" href="/favicon.ico" sizes="any" />
-          <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-          <link rel="apple-touch-icon" href="/logo.svg" />
-          <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#3b82f6" />
-        </head>
-        <body className="min-h-screen bg-gray-50 font-sans antialiased">
-          <div className="flex min-h-screen flex-col">
-            <ClerkSessionProvider>
-              <ApiLoaderProvider>
-                <Navbar />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-              </ApiLoaderProvider>
-            </ClerkSessionProvider>
-          </div>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`${sora.variable} ${dmSans.variable}`}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+        <link rel="apple-touch-icon" href="/logo.svg" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#3b82f6" />
+      </head>
+      <body className="min-h-screen bg-background font-body antialiased">
+        <div className="flex min-h-screen flex-col">
+          <ApiLoaderProvider>
+            <Navbar />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </ApiLoaderProvider>
+        </div>
+      </body>
+    </html>
   )
 }

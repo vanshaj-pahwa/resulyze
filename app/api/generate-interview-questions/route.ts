@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { auth } from '@clerk/nextjs'
+
+const DEFAULT_USER_ID = 'default-user'
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY is not defined")
@@ -115,29 +116,7 @@ const generateFallbackQuestions = (jobData: any, resumeData: any) => {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the user's session and verify authentication
-    const { userId } = auth();
-    
-    console.log('Interview questions API accessed, userId:', userId);
-    
-    // Check for session cookie from Clerk
-    const hasClerkSession = request.headers.get('cookie')?.includes('__session=');
-    const hasAuthorization = request.headers.get('authorization');
-    
-    if (!userId && !hasClerkSession && !hasAuthorization) {
-      console.log('No authentication found, returning 401');
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-  } catch (authError) {
-    console.error('Authentication error:', authError);
-    // Continue processing - the route might still be accessible even with auth errors
-  }
-
-  try {
-      const { jobData, resumeData, interviewRound, roundName, roundDetails } = await request.json();
+    const { jobData, resumeData, interviewRound, roundName, roundDetails } = await request.json();
       
       if (!jobData || !resumeData) {
         return NextResponse.json(

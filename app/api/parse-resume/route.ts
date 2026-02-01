@@ -103,11 +103,10 @@ I need you to parse this resume text into structured data. Extract all relevant 
   },
   "profile": string,
   "technicalSkills": {
-    "languages": string[],
-    "frontend": string[],
-    "backend": string[],
-    "devTools": string[],
-    "other": string[]
+    // DYNAMIC: Use the EXACT category names from the resume
+    // Examples: "Languages & Frameworks", "AI & Data", "Tools & Platforms", "Concepts", etc.
+    // Each category should be a string array
+    "[category name from resume]": string[]
   },
   "workExperience": [
     {
@@ -139,7 +138,12 @@ I need you to parse this resume text into structured data. Extract all relevant 
   "achievements": string[]
 }
 
-For technical skills, try to categorize them appropriately into languages, frontend, backend, devTools, and other.
+IMPORTANT for technicalSkills:
+- Use the EXACT category names as they appear in the resume (e.g., "Languages & Frameworks", "AI & Data", "Tools & Platforms", "Concepts")
+- Do NOT use generic names like "languages", "frontend", "backend", "devTools", "other"
+- If the resume has "Languages & Frameworks: Python, Java", use "Languages & Frameworks" as the key
+- Preserve the original category structure from the resume
+
 For workExperience, extract bullet points as achievements.
 For projects, extract any bullet points as achievements.
 Always return valid JSON that can be parsed with JSON.parse(). Be as accurate as possible.

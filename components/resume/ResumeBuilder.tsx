@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useUser } from "@clerk/nextjs";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,11 +79,7 @@ interface ResumeData {
   };
   profile: string;
   technicalSkills: {
-    languages: string[];
-    frontend: string[];
-    backend: string[];
-    devTools: string[];
-    other: string[];
+    [key: string]: string[];
   };
   workExperience: WorkExperience[];
   education: {
@@ -102,7 +97,6 @@ export default function ResumeBuilder({
   jobData,
   onResumeDataChange,
 }: Readonly<ResumeBuilderProps>) {
-  const { user } = useUser();
   const [resumeData, setResumeData] = useState<ResumeData>({
     personalInfo: {
       name: "",
@@ -113,13 +107,7 @@ export default function ResumeBuilder({
       location: "",
     },
     profile: "",
-    technicalSkills: {
-      languages: [],
-      frontend: [],
-      backend: [],
-      devTools: [],
-      other: [],
-    },
+    technicalSkills: {},
     workExperience: [],
     education: {
       degree: "",
@@ -185,8 +173,6 @@ export default function ResumeBuilder({
 
   useEffect(() => {
     const loadResumeData = async () => {
-      if (!user) return;
-
       try {
         const response = await fetchWithAuth("/api/user/resume");
         if (response.ok) {
@@ -202,7 +188,7 @@ export default function ResumeBuilder({
             setResumeData(result);
           } else if (result.fallback) {
             try {
-              const localData = localStorage.getItem(`resume_${user.id}`);
+              const localData = localStorage.getItem('resume_default');
               if (localData) {
                 const parsedData = JSON.parse(localData);
                 // Ensure each work experience has a unique ID
@@ -223,7 +209,7 @@ export default function ResumeBuilder({
         console.error("Error loading resume data:", error);
         if (typeof window !== "undefined") {
           try {
-            const localData = localStorage.getItem(`resume_${user.id}`);
+            const localData = localStorage.getItem('resume_default');
             if (localData) {
               const parsedData = JSON.parse(localData);
               // Ensure each work experience has a unique ID
@@ -243,14 +229,14 @@ export default function ResumeBuilder({
         setIsLoading(false);
         
         // Check if we should show the upload banner (no resume data yet)
-        if (user) {
+        if (true) {
           try {
-            const hasSeenUploadBanner = localStorage.getItem(`upload_banner_seen_${user.id}`);
+            const hasSeenUploadBanner = localStorage.getItem('upload_banner_seen_default');
             if (!hasSeenUploadBanner) {
               setShowUploadBanner(true);
               // Mark as seen after 10 seconds
               setTimeout(() => {
-                localStorage.setItem(`upload_banner_seen_${user.id}`, 'true');
+                localStorage.setItem('upload_banner_seen_default', 'true');
                 setShowUploadBanner(false);
               }, 10000);
             }
@@ -262,11 +248,11 @@ export default function ResumeBuilder({
     };
 
     loadResumeData();
-  }, [user]);
+  }, []);
 
   const saveResumeData = useCallback(
     async (data: ResumeData) => {
-      if (!user || isLoading || !data) return;
+      if (isLoading || !data) return;
 
       setIsSaving(true);
       try {
@@ -286,7 +272,7 @@ export default function ResumeBuilder({
           // Store in localStorage as fallback
           if (typeof window !== "undefined") {
             try {
-              localStorage.setItem(`resume_${user.id}`, JSON.stringify(data));
+              localStorage.setItem('resume_default', JSON.stringify(data));
             } catch (localError) {
               console.error("Failed to save to localStorage:", localError);
               showAlert('warning', 'Partial Save', 'Your resume was saved locally but not to the cloud.', 'Changes may not persist across devices.');
@@ -305,7 +291,7 @@ export default function ResumeBuilder({
         // Attempt localStorage fallback
         if (typeof window !== "undefined") {
           try {
-            localStorage.setItem(`resume_${user.id}`, JSON.stringify(data));
+            localStorage.setItem('resume_default', JSON.stringify(data));
             showAlert('warning', 'Offline Save', 'Your resume was saved locally.', 'Changes may not be accessible from other devices until you reconnect.');
           } catch (localError) {
             console.error("Failed to save to localStorage:", localError);
@@ -316,7 +302,7 @@ export default function ResumeBuilder({
         setIsSaving(false);
       }
     },
-    [user, isLoading, resumeData]
+    [isLoading, resumeData]
   );
 
   useEffect(() => {
@@ -459,9 +445,8 @@ export default function ResumeBuilder({
 
   const improveWithAI = async () => {
     await optimizeResume();
-    if (atsData) {
-      await calculateATSScore();
-    }
+    // Always recalculate ATS score after optimization
+    await calculateATSScore();
   };
 
   const completeChecklistWithAI = async () => {
@@ -691,11 +676,6 @@ export default function ResumeBuilder({
           technicalSkills: {
             ...resumeData.technicalSkills,
             ...parsedData.technicalSkills || {},
-            languages: parsedData.technicalSkills?.languages || [],
-            frontend: parsedData.technicalSkills?.frontend || [],
-            backend: parsedData.technicalSkills?.backend || [],
-            devTools: parsedData.technicalSkills?.devTools || [],
-            other: parsedData.technicalSkills?.other || [],
           },
         };
         
@@ -802,7 +782,7 @@ export default function ResumeBuilder({
     try {
       // Show loading alert
       showAlert('info', 'Preparing Download', `Generating your ${format.toUpperCase()} resume...`);
-      
+
       const response = await fetch("/api/download-resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -822,7 +802,7 @@ export default function ResumeBuilder({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       // Show success alert
       showAlert('success', 'Download Started', `Your ${format.toUpperCase()} resume is downloading.`);
     } catch (error) {
@@ -904,9 +884,7 @@ export default function ResumeBuilder({
               className="text-gray-400 hover:text-gray-600"
               onClick={() => {
                 setShowUploadBanner(false);
-                if (user) {
-                  localStorage.setItem(`upload_banner_seen_${user.id}`, 'true');
-                }
+                localStorage.setItem('upload_banner_seen_default', 'true');
               }}
             >
               &times;
@@ -1374,66 +1352,83 @@ export default function ResumeBuilder({
                   <CardTitle>Technical Skills</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Languages
-                    </label>
-                    <Input
-                      placeholder="Java, JavaScript, Python..."
-                      value={resumeData?.technicalSkills.languages.join(", ")}
-                      onChange={(e) =>
-                        setResumeData((prev) => ({
-                          ...prev!,
-                          technicalSkills: {
-                            ...prev!.technicalSkills,
-                            languages: e.target.value
-                              .split(", ")
-                              .filter((s) => s.trim()),
-                          },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Frontend Technologies
-                    </label>
-                    <Input
-                      placeholder="React, Vue, Angular..."
-                      value={resumeData?.technicalSkills.frontend.join(", ")}
-                      onChange={(e) =>
-                        setResumeData((prev) => ({
-                          ...prev!,
-                          technicalSkills: {
-                            ...prev!.technicalSkills,
-                            frontend: e.target.value
-                              .split(", ")
-                              .filter((s) => s.trim()),
-                          },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Backend Technologies
-                    </label>
-                    <Input
-                      placeholder="Spring Boot, Node.js, Django..."
-                      value={resumeData?.technicalSkills.backend.join(", ")}
-                      onChange={(e) =>
-                        setResumeData((prev) => ({
-                          ...prev!,
-                          technicalSkills: {
-                            ...prev!.technicalSkills,
-                            backend: e.target.value
-                              .split(", ")
-                              .filter((s) => s.trim()),
-                          },
-                        }))
-                      }
-                    />
-                  </div>
+                  {/* Dynamic skill categories */}
+                  {resumeData?.technicalSkills && Object.entries(resumeData.technicalSkills).map(([category, skills]) => (
+                    <div key={category} className="border rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <Input
+                          className="text-sm font-medium w-48"
+                          value={category}
+                          onChange={(e) => {
+                            const newCategory = e.target.value;
+                            if (newCategory && newCategory !== category) {
+                              setResumeData((prev) => {
+                                const newSkills = { ...prev!.technicalSkills };
+                                const values = newSkills[category];
+                                delete newSkills[category];
+                                newSkills[newCategory] = values;
+                                return {
+                                  ...prev!,
+                                  technicalSkills: newSkills,
+                                };
+                              });
+                            }
+                          }}
+                          placeholder="Category name"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setResumeData((prev) => {
+                              const newSkills = { ...prev!.technicalSkills };
+                              delete newSkills[category];
+                              return {
+                                ...prev!,
+                                technicalSkills: newSkills,
+                              };
+                            });
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="Enter skills separated by commas..."
+                        value={Array.isArray(skills) ? skills.join(", ") : ""}
+                        onChange={(e) =>
+                          setResumeData((prev) => ({
+                            ...prev!,
+                            technicalSkills: {
+                              ...prev!.technicalSkills,
+                              [category]: e.target.value
+                                .split(",")
+                                .map((s) => s.trim())
+                                .filter((s) => s),
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add new skill category */}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const newCategoryName = `New Category ${Object.keys(resumeData?.technicalSkills || {}).length + 1}`;
+                      setResumeData((prev) => ({
+                        ...prev!,
+                        technicalSkills: {
+                          ...prev!.technicalSkills,
+                          [newCategoryName]: [],
+                        },
+                      }));
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Skill Category
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1539,8 +1534,10 @@ export default function ResumeBuilder({
           </Tabs>
         </div>
 
-        <div className="lg:sticky lg:top-4">
-          <ResumePreview resumeData={resumeData} />
+        <div className="lg:sticky lg:top-4 w-full overflow-hidden">
+          <div className="resume-preview-container">
+            <ResumePreview resumeData={resumeData} />
+          </div>
         </div>
       </div>
     </div>

@@ -51,6 +51,25 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     return 'Needs work'
   }
 
+  // Helper to get all skills from dynamic categories
+  const getAllSkills = (): string[] => {
+    if (!resumeData?.technicalSkills) return []
+    const allSkills: string[] = []
+    for (const [, value] of Object.entries(resumeData.technicalSkills)) {
+      if (Array.isArray(value)) {
+        allSkills.push(...value)
+      } else if (typeof value === 'string' && value.trim()) {
+        allSkills.push(value)
+      }
+    }
+    return allSkills
+  }
+
+  // Helper to get total skill count from dynamic categories
+  const getTotalSkillCount = (): number => {
+    return getAllSkills().length
+  }
+
   const countWords = (text: string): number => {
     return text ? text.split(/\s+/).filter(word => word.length > 0).length : 0
   }
@@ -148,7 +167,7 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     // Boost score if ATS compatibility checks are all passing
     const atsChecks = [
       (resumeData?.personalInfo?.name && resumeData?.personalInfo?.email && resumeData?.personalInfo?.phone),
-      (resumeData?.technicalSkills?.languages?.length || 0) >= 3,
+      getTotalSkillCount() >= 3,
       allAchievements.some((achievement: string) => hasQuantifiedAchievements(achievement)),
       (resumeData?.profile?.trim()?.length || 0) >= 100,
       (resumeData?.workExperience?.length || 0) > 0 && allAchievements.length >= 3
@@ -182,10 +201,7 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     const jobSkills = jobData.skills.map((s: string) => s.toLowerCase())
     const resumeText = [
       resumeData?.profile || '',
-      ...(resumeData?.technicalSkills?.languages || []),
-      ...(resumeData?.technicalSkills?.frontend || []),
-      ...(resumeData?.technicalSkills?.backend || []),
-      ...(resumeData?.technicalSkills?.devTools || []),
+      ...getAllSkills(),
       ...(resumeData?.workExperience?.flatMap((exp: any) => exp.achievements || []) || [])
     ].join(' ').toLowerCase()
 
@@ -343,7 +359,7 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     const hasProfile = !!(resumeData?.profile?.trim())
     const hasWorkExperience = !!(resumeData?.workExperience?.length)
     const hasEducation = !!(resumeData?.education?.degree)
-    const hasSkills = !!(resumeData?.technicalSkills?.languages?.length)
+    const hasSkills = getTotalSkillCount() > 0
     const hasProjects = !!(resumeData?.projects?.length)
 
     const sectionCount = [hasProfile, hasWorkExperience, hasEducation, hasSkills, hasProjects].filter(Boolean).length
@@ -389,16 +405,20 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     let score = 0
     const feedback: string[] = []
 
-    // Check technical skills coverage and organization
-    const skillCategories = [
-      resumeData?.technicalSkills?.languages?.length || 0,
-      resumeData?.technicalSkills?.frontend?.length || 0,
-      resumeData?.technicalSkills?.backend?.length || 0,
-      resumeData?.technicalSkills?.devTools?.length || 0
-    ]
+    // Check technical skills coverage and organization (dynamic categories)
+    const skillCategoryCounts: number[] = []
+    if (resumeData?.technicalSkills) {
+      for (const [, value] of Object.entries(resumeData.technicalSkills)) {
+        if (Array.isArray(value)) {
+          skillCategoryCounts.push(value.length)
+        } else if (typeof value === 'string' && value.trim()) {
+          skillCategoryCounts.push(1)
+        }
+      }
+    }
 
-    const totalSkills = skillCategories.reduce((sum, count) => sum + count, 0)
-    const categoriesWithSkills = skillCategories.filter(count => count > 0).length
+    const totalSkills = skillCategoryCounts.reduce((sum, count) => sum + count, 0)
+    const categoriesWithSkills = skillCategoryCounts.filter(count => count > 0).length
 
     // Score based on total skills and organization
     if (totalSkills >= 20 && categoriesWithSkills >= 3) {
@@ -430,7 +450,7 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     }
 
     // Check for skill depth indicators
-    const hasSkillLevels = resumeData?.technicalSkills?.languages?.some((skill: string) =>
+    const hasSkillLevels = getAllSkills().some((skill: string) =>
       skill.includes('(') || skill.includes('Advanced') || skill.includes('Intermediate')
     )
 
@@ -476,8 +496,8 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
     },
     {
       item: "Technical skills section present",
-      status: (resumeData?.technicalSkills?.languages?.length || 0) >= 3 ? 'pass' : 'warning',
-      icon: (resumeData?.technicalSkills?.languages?.length || 0) >= 3 ? 'check' : 'warning'
+      status: getTotalSkillCount() >= 3 ? 'pass' : 'warning',
+      icon: getTotalSkillCount() >= 3 ? 'check' : 'warning'
     },
     {
       item: "Quantified achievements included",
@@ -517,14 +537,9 @@ export function calculateATSScore(resumeData: any, jobData: any): ATSScoreResult
   }
 
   // Technical skills expansion
-  const totalSkills = [
-    resumeData?.technicalSkills?.languages?.length || 0,
-    resumeData?.technicalSkills?.frontend?.length || 0,
-    resumeData?.technicalSkills?.backend?.length || 0,
-    resumeData?.technicalSkills?.devTools?.length || 0
-  ].reduce((sum, count) => sum + count, 0)
+  const totalSkillsCount = getTotalSkillCount()
 
-  if (totalSkills < 12) {
+  if (totalSkillsCount < 12) {
     improvementChecklist.push('Expand technical skills to at least 12 relevant technologies')
   }
 
