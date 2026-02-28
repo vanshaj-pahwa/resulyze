@@ -7,10 +7,13 @@ import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2 } from 'lucide-reac
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
+import { useChatLatex } from '@/hooks/useChatLatex'
 
 const CodePanel = dynamic(() => import('./CodePanel'), { ssr: false })
 const PreviewPanel = dynamic(() => import('./PreviewPanel'), { ssr: false })
 const SkillMatchPanel = dynamic(() => import('./SkillMatchPanel'), { ssr: false })
+const ChatPanel = dynamic(() => import('./ChatPanel'), { ssr: false })
+const ChatFloatingBar = dynamic(() => import('./ChatFloatingBar'), { ssr: false })
 
 interface LatexEditorProps {
   readonly jobData: any
@@ -40,6 +43,19 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
   // Auto-compile flag — when true, triggers compilation on next render
   const [pendingCompile, setPendingCompile] = useState(true) // true = compile on initial load
+
+  // Chat state
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const chat = useChatLatex({
+    latexSource,
+    jobData,
+    onApplyChanges: useCallback((newLatex: string) => {
+      setPreviousLatex(latexSource)
+      setLatexSource(newLatex)
+      setPendingCompile(true)
+      toast.success('Changes applied from AI assistant')
+    }, [latexSource]),
+  })
 
   // Auto-save to localStorage (only when user has modified from default)
   useEffect(() => {
@@ -154,6 +170,18 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     }
   }, [pendingCompile, isCompiling, handleCompile])
 
+  // Keyboard shortcut: Ctrl+Shift+L to toggle chat
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+        e.preventDefault()
+        setIsChatOpen(prev => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   // Clean up blob URL on unmount
   useEffect(() => {
     return () => {
@@ -163,18 +191,25 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     }
   }, [])
 
+  // Send from floating bar: open chat + send message
+  const handleFloatingSend = useCallback((message: string) => {
+    setIsChatOpen(true)
+    // Delay slightly so ChatPanel mounts before sendMessage triggers
+    setTimeout(() => chat.sendMessage(message), 50)
+  }, [chat])
+
   return (
     <div className="flex flex-col h-[calc(100vh-180px)] min-h-[500px] rounded-lg overflow-hidden border border-latex-border shadow-lg">
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left: Code Editor */}
-        <div className="lg:w-1/2 h-1/2 lg:h-full flex flex-col bg-latex-editor min-w-0">
+        <div className={`${isChatOpen ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-latex-editor min-w-0 relative transition-all duration-200`}>
           {/* Tab bar */}
-          <div className="h-10 bg-latex-toolbar flex items-center justify-between px-3 border-b border-latex-border shrink-0">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-zinc-400" />
-              <span className="text-sm text-white font-mono">main.tex</span>
+          <div className="h-10 bg-latex-toolbar flex items-center justify-between px-2 border-b border-latex-border shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <FileText className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="text-xs text-white font-mono">main.tex</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               {/* Optimize for JD button */}
               <TooltipProvider>
                 <Tooltip>
@@ -182,7 +217,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                     <button
                       onClick={handleOptimize}
                       disabled={!jobData || isOptimizing}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-colors font-medium
+                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap
                         ${jobData
                           ? 'text-zinc-200 hover:text-white hover:bg-white/10 border border-zinc-600'
                           : 'text-zinc-600 cursor-not-allowed border border-zinc-700'
@@ -191,11 +226,11 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       `}
                     >
                       {isOptimizing ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                       ) : (
-                        <Sparkles className="w-3.5 h-3.5" />
+                        <Sparkles className="w-3.5 h-3.5 shrink-0" />
                       )}
-                      {isOptimizing ? 'Optimizing...' : 'Optimize for JD'}
+                      <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize for JD'}</span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -261,14 +296,43 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
           {jobData && (
             <SkillMatchPanel jobData={jobData} latexSource={latexSource} />
           )}
+
+          {/* Floating "Ask anything" bar */}
+          {!isChatOpen && (
+            <ChatFloatingBar
+              onSend={handleFloatingSend}
+              onExpand={() => setIsChatOpen(true)}
+              disabled={chat.isLoading}
+            />
+          )}
         </div>
+
+        {/* Chat Panel (middle column) */}
+        {isChatOpen && (
+          <>
+            <div className="hidden lg:block w-px bg-latex-border shrink-0" />
+            <div className="lg:hidden h-px bg-latex-border shrink-0" />
+            <div className="lg:w-[28%] h-1/3 lg:h-full flex flex-col min-w-0">
+              <ChatPanel
+                onClose={() => setIsChatOpen(false)}
+                messages={chat.messages}
+                isLoading={chat.isLoading}
+                onSendMessage={chat.sendMessage}
+                onApplyProposal={chat.applyProposal}
+                onDismissProposal={chat.dismissProposal}
+                onUndoChanges={handleUndoOptimization}
+                onClearChat={chat.clearChat}
+              />
+            </div>
+          </>
+        )}
 
         {/* Divider */}
         <div className="hidden lg:block w-px bg-latex-border shrink-0" />
         <div className="lg:hidden h-px bg-latex-border shrink-0" />
 
         {/* Right: PDF Preview */}
-        <div className="lg:w-1/2 h-1/2 lg:h-full flex flex-col bg-white min-w-0">
+        <div className={`${isChatOpen ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200`}>
           <PreviewPanel
             pdfUrl={pdfBlobUrl}
             isCompiling={isCompiling}
