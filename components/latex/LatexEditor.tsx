@@ -3,17 +3,19 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
-import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2 } from 'lucide-react'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
 import { useChatLatex } from '@/hooks/useChatLatex'
+import { useResumeVersions } from '@/hooks/useResumeVersions'
 
 const CodePanel = dynamic(() => import('./CodePanel'), { ssr: false })
 const PreviewPanel = dynamic(() => import('./PreviewPanel'), { ssr: false })
 const SkillMatchPanel = dynamic(() => import('./SkillMatchPanel'), { ssr: false })
 const ChatPanel = dynamic(() => import('./ChatPanel'), { ssr: false })
 const ChatFloatingBar = dynamic(() => import('./ChatFloatingBar'), { ssr: false })
+const VersionHistory = dynamic(() => import('./VersionHistory'), { ssr: false })
 
 interface LatexEditorProps {
   readonly jobData: any
@@ -51,17 +53,22 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   // Auto-compile flag — when true, triggers compilation on next render
   const [pendingCompile, setPendingCompile] = useState(true) // true = compile on initial load
 
+  // Version history
+  const { versions, saveVersion, deleteVersion, updateLabel } = useResumeVersions()
+  const [showHistory, setShowHistory] = useState(false)
+
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false)
   const chat = useChatLatex({
     latexSource,
     jobData,
     onApplyChanges: useCallback((newLatex: string) => {
+      saveVersion(latexSource, resumeTitle, 'Before AI chat changes')
       setPreviousLatex(latexSource)
       setLatexSource(newLatex)
       setPendingCompile(true)
       toast.success('Changes applied from AI assistant')
-    }, [latexSource]),
+    }, [latexSource, resumeTitle, saveVersion]),
   })
 
   // Auto-save to localStorage (only when user has modified from default)
@@ -153,6 +160,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       }
 
       if (data.optimizedLatex && data.optimizedLatex !== latexSource) {
+        saveVersion(latexSource, resumeTitle, 'Before JD optimization')
         setLatexSource(data.optimizedLatex)
         setOptimizationChanges(data.changes || [])
         setShowChangesPanel(true)
@@ -180,6 +188,14 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       toast.info('Optimization undone')
     }
   }, [previousLatex])
+
+  const handleRestoreVersion = useCallback((latex: string) => {
+    saveVersion(latexSource, resumeTitle, 'Before restore')
+    setLatexSource(latex)
+    setPendingCompile(true)
+    setShowHistory(false)
+    toast.success('Version restored')
+  }, [latexSource, resumeTitle, saveVersion])
 
   // Auto-compile when pendingCompile is set (initial load + after optimization)
   useEffect(() => {
@@ -264,6 +280,27 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       : 'Complete Step 1 (Job Analysis) first'
                     }
                   </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Version History button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setShowHistory(prev => !prev)}
+                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border
+                        ${showHistory
+                          ? 'text-white bg-white/10 border-zinc-500'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/10 border-zinc-700'
+                        }
+                      `}
+                    >
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">History</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Version history</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -356,15 +393,25 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
         <div className="hidden lg:block w-px bg-latex-border shrink-0" />
         <div className="lg:hidden h-px bg-latex-border shrink-0" />
 
-        {/* Right: PDF Preview */}
-        <div className={`${isChatOpen ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200`}>
-          <PreviewPanel
-            pdfUrl={pdfBlobUrl}
-            isCompiling={isCompiling}
-            error={compilationError}
-            onCompile={handleCompile}
-            onDownload={handleDownload}
-          />
+        {/* Right: PDF Preview or Version History */}
+        <div className={`${isChatOpen ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200 relative`}>
+          {showHistory ? (
+            <VersionHistory
+              versions={versions}
+              onRestore={handleRestoreVersion}
+              onDelete={deleteVersion}
+              onUpdateLabel={updateLabel}
+              onClose={() => setShowHistory(false)}
+            />
+          ) : (
+            <PreviewPanel
+              pdfUrl={pdfBlobUrl}
+              isCompiling={isCompiling}
+              error={compilationError}
+              onCompile={handleCompile}
+              onDownload={handleDownload}
+            />
+          )}
         </div>
       </div>
     </div>

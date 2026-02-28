@@ -120,6 +120,12 @@ function useTypingHeadlines(items: typeof headlines, typeSpeed = 50, deleteSpeed
 export default function Home() {
   const revealRef = useScrollReveal()
   const typed = useTypingHeadlines(headlines)
+  const [hasResume, setHasResume] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('resulyze-latex-source')
+    setHasResume(!!saved)
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -160,6 +166,17 @@ export default function Home() {
               </Button>
             </a>
           </div>
+          {hasResume && (
+            <div className="mt-4 animate-fade-in">
+              <Link href="/dashboard/resume">
+                <Button variant="ghost" size="sm" className="gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-400 dark:hover:text-zinc-100">
+                  <Code2 className="w-3.5 h-3.5" />
+                  Continue editing your resume
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          )}
           <p className="mt-6 text-sm text-zinc-400 dark:text-zinc-500">
             Free, open-source, and powered by your own API key.
           </p>
