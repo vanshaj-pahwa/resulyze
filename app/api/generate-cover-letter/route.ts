@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not defined")
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+import { getGeminiClient } from '@/lib/gemini'
 
 export async function POST(request: NextRequest) {
   try {
+    const genAI = getGeminiClient(request)
     const { jobData, resumeData } = await request.json()
 
     const model = genAI.getGenerativeModel({ 
@@ -21,29 +16,29 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    const resumeContent = resumeData.latexSource || JSON.stringify(resumeData)
+
     const prompt = `
     Write a professional cover letter based on the following information:
 
     Job Information:
-    - Job Title: ${jobData.jobTitle}
-    - Company: ${jobData.company}
-    - Key Requirements: ${jobData.skills?.join(', ')}
-    - Qualifications: ${jobData.qualifications?.join(', ')}
+    - Job Title: ${jobData.jobTitle || 'Not specified'}
+    - Company: ${jobData.company || 'Not specified'}
+    - Key Requirements: ${jobData.skills?.join(', ') || 'Not specified'}
+    - Qualifications: ${jobData.qualifications?.join(', ') || 'Not specified'}
 
-    Candidate Information:
-    - Name: ${resumeData.personalInfo.name}
-    - Current Role: ${resumeData.workExperience[0]?.title}
-    - Experience: ${resumeData.profile}
-    - Key Skills: ${resumeData.technicalSkills.languages?.join(', ')}
+    Candidate's Resume:
+    ${resumeContent}
 
     Write a compelling cover letter that:
-    1. Opens with enthusiasm for the specific role and company
-    2. Highlights relevant experience and achievements from the resume
-    3. Demonstrates knowledge of the company and role requirements
-    4. Shows how the candidate's skills align with job requirements
-    5. Closes with a strong call to action
-    6. Maintains a professional yet personable tone
-    7. Is approximately 3-4 paragraphs long
+    1. Extracts the candidate's name, experience, and skills from the resume above
+    2. Opens with enthusiasm for the specific role and company
+    3. Highlights relevant experience and achievements from the resume
+    4. Demonstrates knowledge of the company and role requirements
+    5. Shows how the candidate's skills align with job requirements
+    6. Closes with a strong call to action
+    7. Maintains a professional yet personable tone
+    8. Is approximately 3-4 paragraphs long
 
     Format the cover letter properly with:
     - Date

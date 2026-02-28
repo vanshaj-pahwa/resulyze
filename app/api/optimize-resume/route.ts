@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not defined")
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+import { getGeminiClient } from '@/lib/gemini'
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -40,14 +34,8 @@ const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, ini
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      console.error("API Key is missing");
-      return NextResponse.json(
-        { error: 'API key configuration issue', details: 'GEMINI_API_KEY is not available' },
-        { status: 500 }
-      );
-    }
-    
+    const genAI = getGeminiClient(request)
+
     const { resumeData, jobData, optimizationMode = "general", improvementChecklist = [], missingSkills = [] } = await request.json()
 
     if (!resumeData) {

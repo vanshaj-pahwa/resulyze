@@ -1,0 +1,283 @@
+'use client'
+
+import { useState, useCallback, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
+import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
+import { fetchWithKey } from '@/lib/fetch'
+
+const CodePanel = dynamic(() => import('./CodePanel'), { ssr: false })
+const PreviewPanel = dynamic(() => import('./PreviewPanel'), { ssr: false })
+const SkillMatchPanel = dynamic(() => import('./SkillMatchPanel'), { ssr: false })
+
+interface LatexEditorProps {
+  readonly jobData: any
+  readonly onResumeDataChange: (data: any) => void
+}
+
+const STORAGE_KEY = 'resulyze-latex-source'
+
+export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditorProps) {
+  const [latexSource, setLatexSource] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) return saved
+    }
+    return DEFAULT_LATEX_SOURCE
+  })
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
+  const [isCompiling, setIsCompiling] = useState(false)
+  const [compilationError, setCompilationError] = useState<string | null>(null)
+  const prevBlobUrl = useRef<string | null>(null)
+
+  // Optimization state
+  const [isOptimizing, setIsOptimizing] = useState(false)
+  const [optimizationChanges, setOptimizationChanges] = useState<string[]>([])
+  const [showChangesPanel, setShowChangesPanel] = useState(false)
+  const [previousLatex, setPreviousLatex] = useState<string | null>(null)
+
+  // Auto-compile flag — when true, triggers compilation on next render
+  const [pendingCompile, setPendingCompile] = useState(true) // true = compile on initial load
+
+  // Auto-save to localStorage (only when user has modified from default)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (latexSource !== DEFAULT_LATEX_SOURCE) {
+        localStorage.setItem(STORAGE_KEY, latexSource)
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }, 500)
+    return () => clearTimeout(timeout)
+  }, [latexSource])
+
+  const handleCompile = useCallback(async () => {
+    if (isCompiling) return
+    setIsCompiling(true)
+    setCompilationError(null)
+
+    try {
+      const response = await fetch('/api/compile-latex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: latexSource }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        setCompilationError(error.details || error.error || 'Compilation failed')
+        return
+      }
+
+      const pdfBlob = await response.blob()
+      const url = URL.createObjectURL(pdfBlob)
+
+      if (prevBlobUrl.current) {
+        URL.revokeObjectURL(prevBlobUrl.current)
+      }
+      prevBlobUrl.current = url
+      setPdfBlobUrl(url)
+
+      onResumeDataChange({ latexSource })
+    } catch (err: any) {
+      setCompilationError(err.message || 'Failed to connect to compilation service')
+    } finally {
+      setIsCompiling(false)
+    }
+  }, [latexSource, isCompiling, onResumeDataChange])
+
+  const handleDownload = useCallback(() => {
+    if (!pdfBlobUrl) return
+    const a = document.createElement('a')
+    a.href = pdfBlobUrl
+    a.download = 'resume.pdf'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }, [pdfBlobUrl])
+
+  const handleOptimize = useCallback(async () => {
+    if (isOptimizing || !jobData) return
+    setIsOptimizing(true)
+    setPreviousLatex(latexSource)
+
+    try {
+      const response = await fetchWithKey('/api/optimize-latex', {
+        method: 'POST',
+        body: JSON.stringify({ latexSource, jobData }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || data.error) {
+        toast.error(data.error || 'Optimization failed')
+        setPreviousLatex(null)
+        return
+      }
+
+      if (data.optimizedLatex && data.optimizedLatex !== latexSource) {
+        setLatexSource(data.optimizedLatex)
+        setOptimizationChanges(data.changes || [])
+        setShowChangesPanel(true)
+        setPendingCompile(true) // auto-compile with optimized LaTeX
+        toast.success(`Resume optimized! ${data.changes?.length || 0} changes made.`)
+      } else {
+        toast.info('No changes needed — your resume already matches well.')
+        setPreviousLatex(null)
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to optimize resume')
+      setPreviousLatex(null)
+    } finally {
+      setIsOptimizing(false)
+    }
+  }, [latexSource, jobData, isOptimizing])
+
+  const handleUndoOptimization = useCallback(() => {
+    if (previousLatex) {
+      setLatexSource(previousLatex)
+      setPreviousLatex(null)
+      setShowChangesPanel(false)
+      setOptimizationChanges([])
+      setPendingCompile(true) // auto-compile reverted LaTeX
+      toast.info('Optimization undone')
+    }
+  }, [previousLatex])
+
+  // Auto-compile when pendingCompile is set (initial load + after optimization)
+  useEffect(() => {
+    if (pendingCompile && !isCompiling) {
+      setPendingCompile(false)
+      handleCompile()
+    }
+  }, [pendingCompile, isCompiling, handleCompile])
+
+  // Clean up blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (prevBlobUrl.current) {
+        URL.revokeObjectURL(prevBlobUrl.current)
+      }
+    }
+  }, [])
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-180px)] min-h-[500px] rounded-lg overflow-hidden border border-latex-border shadow-lg">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {/* Left: Code Editor */}
+        <div className="lg:w-1/2 h-1/2 lg:h-full flex flex-col bg-latex-editor min-w-0">
+          {/* Tab bar */}
+          <div className="h-10 bg-latex-toolbar flex items-center justify-between px-3 border-b border-latex-border shrink-0">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-zinc-400" />
+              <span className="text-sm text-white font-mono">main.tex</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Optimize for JD button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleOptimize}
+                      disabled={!jobData || isOptimizing}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-colors font-medium
+                        ${jobData
+                          ? 'text-zinc-200 hover:text-white hover:bg-white/10 border border-zinc-600'
+                          : 'text-zinc-600 cursor-not-allowed border border-zinc-700'
+                        }
+                        ${isOptimizing ? 'opacity-60 cursor-wait' : ''}
+                      `}
+                    >
+                      {isOptimizing ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                      {isOptimizing ? 'Optimizing...' : 'Optimize for JD'}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {jobData
+                      ? `Optimize for ${jobData.jobTitle || 'target role'}${jobData.company ? ' at ' + jobData.company : ''}`
+                      : 'Complete Step 1 (Job Analysis) first'
+                    }
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+
+          {/* Changes panel */}
+          {showChangesPanel && optimizationChanges.length > 0 && (
+            <div className="bg-zinc-800/60 border-b border-zinc-700/50 px-3 py-2 shrink-0 max-h-36 overflow-y-auto">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-zinc-300" />
+                  <span className="text-xs font-medium text-zinc-300">
+                    {optimizationChanges.length} changes applied
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {previousLatex && (
+                    <button
+                      onClick={handleUndoOptimization}
+                      className="flex items-center gap-1 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-700/50 rounded transition-colors"
+                    >
+                      <Undo2 className="w-3 h-3" />
+                      Undo
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowChangesPanel(false)}
+                    className="p-0.5 text-zinc-500 hover:text-zinc-300 rounded transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <ul className="space-y-0.5">
+                {optimizationChanges.map((change, i) => (
+                  <li key={i} className="text-xs text-zinc-400 flex items-start gap-1.5">
+                    <span className="text-zinc-500 mt-0.5 shrink-0">•</span>
+                    {change}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Editor */}
+          <div className="flex-1 overflow-hidden">
+            <CodePanel
+              value={latexSource}
+              onChange={setLatexSource}
+              onCompile={handleCompile}
+            />
+          </div>
+
+          {/* Skill match bar */}
+          {jobData && (
+            <SkillMatchPanel jobData={jobData} latexSource={latexSource} />
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="hidden lg:block w-px bg-latex-border shrink-0" />
+        <div className="lg:hidden h-px bg-latex-border shrink-0" />
+
+        {/* Right: PDF Preview */}
+        <div className="lg:w-1/2 h-1/2 lg:h-full flex flex-col bg-white min-w-0">
+          <PreviewPanel
+            pdfUrl={pdfBlobUrl}
+            isCompiling={isCompiling}
+            error={compilationError}
+            onCompile={handleCompile}
+            onDownload={handleDownload}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Upload, FileText, Link as LinkIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { fetchWithKey } from '@/lib/fetch'
 
 interface JobDescriptionProcessorProps {
   readonly onJobDataExtracted: (data: any) => void
@@ -25,12 +26,11 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
 
     setIsProcessing(true)
     try {
-      const response = await fetch('/api/process-job-description', {
+      const response = await fetchWithKey('/api/process-job-description', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           jobDescription: inputMethod === 'text' ? jobDescription : '',
-          jobDescriptionUrl: inputMethod === 'url' ? jobDescriptionUrl : '' 
+          jobDescriptionUrl: inputMethod === 'url' ? jobDescriptionUrl : ''
         })
       })
 
@@ -157,14 +157,14 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
               {extractedData.jobTitle && (
                 <div>
                   <h4 className="font-semibold mb-2">Job Title</h4>
-                  <p className="text-sm text-gray-600">{extractedData.jobTitle}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{extractedData.jobTitle}</p>
                 </div>
               )}
 
               {extractedData.company && (
                 <div>
                   <h4 className="font-semibold mb-2">Company</h4>
-                  <p className="text-sm text-gray-600">{extractedData.company}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{extractedData.company}</p>
                 </div>
               )}
 
@@ -188,7 +188,7 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
               {extractedData.qualifications && extractedData.qualifications.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-2 text-base xs:text-lg">Key Qualifications</h4>
-                  <ul className="list-disc list-inside space-y-1 text-xs xs:text-sm text-gray-600 ml-0 xs:ml-2">
+                  <ul className="list-disc list-inside space-y-1 text-xs xs:text-sm text-zinc-600 dark:text-zinc-400 ml-0 xs:ml-2">
                     {extractedData.qualifications.map((qual: string, index: number) => (
                       <li key={`qual-${index}-${qual.substring(0, 15)}`} className="mb-1">{qual}</li>
                     ))}
@@ -216,14 +216,14 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
               {extractedData.experience && (
                 <div>
                   <h4 className="font-semibold mb-2">Experience Required</h4>
-                  <p className="text-sm text-gray-600">{extractedData.experience}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{extractedData.experience}</p>
                 </div>
               )}
 
               {extractedData.location && (
                 <div>
                   <h4 className="font-semibold mb-2">Location</h4>
-                  <p className="text-sm text-gray-600">{extractedData.location}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{extractedData.location}</p>
                 </div>
               )}
             </CardContent>
@@ -232,7 +232,7 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
           <div className="flex justify-center sm:justify-end mt-4">
             <Button 
               onClick={() => window.dispatchEvent(new CustomEvent('move-to-resume-optimization'))}
-              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm xs:text-base"
+              className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 w-full sm:w-auto text-sm xs:text-base"
             >
               <span className="hidden xs:inline">Optimize My Resume Based on This Analysis</span>
               <span className="xs:hidden">Optimize Resume</span>

@@ -1,314 +1,266 @@
+'use client'
+
 import Link from 'next/link'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  FileText,
-  MessageSquare,
-  Users,
-  Zap,
-  Upload,
-  Star,
-  CheckCircle,
-  ArrowRight,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Shield
-} from 'lucide-react'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
+import { FileText, Code2, PenSquare, Zap, ArrowRight, Github } from 'lucide-react'
+
+const headlines = [
+  { top: 'Land the role.', bottom: 'Not just the interview.' },
+  { top: 'Your resume,', bottom: 'optimized by AI.' },
+  { top: 'One job posting.', bottom: 'One perfect application.' },
+  { top: 'Stop guessing.', bottom: 'Start getting callbacks.' },
+  { top: 'Write less.', bottom: 'Get hired more.' },
+]
+
+const features = [
+  {
+    icon: FileText,
+    title: 'Intelligent Job Analysis',
+    description: 'Drop in any job posting. Our AI dissects it in seconds, surfacing the exact skills, qualifications, and keywords that matter to hiring teams.',
+  },
+  {
+    icon: Code2,
+    title: 'LaTeX Resume Editor',
+    description: 'Write in LaTeX, preview in real time. One click optimizes your resume against the job description so every bullet point earns its place.',
+  },
+  {
+    icon: PenSquare,
+    title: 'Cover Letters & Referrals',
+    description: 'Generate compelling, role-specific cover letters and concise referral messages that sound like you, not a template.',
+  },
+  {
+    icon: Zap,
+    title: 'Interview Preparation',
+    description: 'Practice with AI-generated questions drawn from the actual job requirements, complete with model answers and company research.',
+  },
+]
+
+const steps = [
+  {
+    num: 1,
+    title: 'Paste the job description',
+    description: 'Skills, requirements, and keywords are extracted automatically.',
+  },
+  {
+    num: 2,
+    title: 'Refine your resume',
+    description: 'AI suggestions align every detail to the specific role.',
+  },
+  {
+    num: 3,
+    title: 'Prepare with confidence',
+    description: 'Cover letters, referral messages, and interview questions, ready in minutes.',
+  },
+]
+
+function useTypingHeadlines(items: typeof headlines, typeSpeed = 50, deleteSpeed = 30, pauseMs = 3000) {
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * items.length))
+  const [displayed, setDisplayed] = useState({ top: '', bottom: '' })
+  const [phase, setPhase] = useState<'typing-top' | 'typing-bottom' | 'paused' | 'deleting-bottom' | 'deleting-top'>('typing-top')
+
+  useEffect(() => {
+    const target = items[idx]
+    let timer: ReturnType<typeof setTimeout>
+
+    switch (phase) {
+      case 'typing-top':
+        if (displayed.top.length < target.top.length) {
+          timer = setTimeout(() => {
+            setDisplayed(d => ({ ...d, top: target.top.slice(0, d.top.length + 1) }))
+          }, typeSpeed)
+        } else {
+          timer = setTimeout(() => setPhase('typing-bottom'), 100)
+        }
+        break
+
+      case 'typing-bottom':
+        if (displayed.bottom.length < target.bottom.length) {
+          timer = setTimeout(() => {
+            setDisplayed(d => ({ ...d, bottom: target.bottom.slice(0, d.bottom.length + 1) }))
+          }, typeSpeed)
+        } else {
+          timer = setTimeout(() => setPhase('paused'), pauseMs)
+        }
+        break
+
+      case 'paused':
+        setPhase('deleting-bottom')
+        break
+
+      case 'deleting-bottom':
+        if (displayed.bottom.length > 0) {
+          timer = setTimeout(() => {
+            setDisplayed(d => ({ ...d, bottom: d.bottom.slice(0, -1) }))
+          }, deleteSpeed)
+        } else {
+          setPhase('deleting-top')
+        }
+        break
+
+      case 'deleting-top':
+        if (displayed.top.length > 0) {
+          timer = setTimeout(() => {
+            setDisplayed(d => ({ ...d, top: d.top.slice(0, -1) }))
+          }, deleteSpeed)
+        } else {
+          setIdx(prev => (prev + 1) % items.length)
+          setPhase('typing-top')
+        }
+        break
+    }
+
+    return () => clearTimeout(timer)
+  }, [phase, displayed, idx, items, typeSpeed, deleteSpeed, pauseMs])
+
+  return displayed
+}
 
 export default function Home() {
+  const revealRef = useScrollReveal()
+  const typed = useTypingHeadlines(headlines)
+
   return (
-    <>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-32 lg:py-40">
-        {/* Background effects */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-300/[0.05] rounded-full blur-3xl" />
-        </div>
-
-        <div className="container mx-auto px-4 relative">
-          <div className="max-w-4xl mx-auto text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-200/80 bg-blue-50/50 mb-8 animate-fade-up">
-              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-              <span className="text-xs font-medium text-blue-700 uppercase tracking-wider">AI-Powered Career Tools</span>
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-heading font-bold tracking-tight mb-8 animate-fade-up" style={{ animationDelay: '100ms' }}>
-              <span className="block text-gray-900">Resumes that</span>
-              <span className="heading-gradient">get you hired</span>
-            </h1>
-
-            <p className="text-lg sm:text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-up" style={{ animationDelay: '200ms' }}>
-              Build ATS-optimized resumes, generate tailored cover letters, and prepare for interviews with AI that understands what recruiters look for.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: '300ms' }}>
-              <Link href="/dashboard">
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold rounded-lg shadow-glow-md hover:shadow-glow-lg transition-all duration-300 text-base px-8 py-3 gap-2">
-                  Start Building Free
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-              <Link href="#features" scroll={false}>
-                <Button size="lg" variant="outline" className="rounded-lg text-base px-8 py-3 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-blue-200">
-                  Explore Features
-                </Button>
-              </Link>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-6 mt-12 animate-fade-up" style={{ animationDelay: '400ms' }}>
-              {[
-                { icon: Shield, text: 'Free to use' },
-                { icon: Zap, text: 'AI-powered' },
-                { icon: Target, text: 'ATS optimized' },
-              ].map((item) => (
-                <div key={item.text} className="flex items-center gap-2 text-sm text-gray-500">
-                  <item.icon className="w-4 h-4 text-blue-500/70" />
-                  <span>{item.text}</span>
-                </div>
-              ))}
-            </div>
+    <div className="min-h-screen">
+      {/* Hero */}
+      <section className="py-24 sm:py-32">
+        <div className="container mx-auto px-4 sm:px-6 max-w-3xl text-center">
+          <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-[1.1] min-h-[2.4em]">
+            {typed.top}
+            {typed.bottom ? (
+              <>
+                <span className="inline-block w-[3px] h-[0.9em] bg-transparent ml-0 align-baseline" />
+                <br />
+                {typed.bottom}
+                <span className="inline-block w-[3px] h-[0.9em] bg-zinc-900 dark:bg-zinc-100 ml-1 align-baseline animate-pulse" />
+              </>
+            ) : (
+              <span className="inline-block w-[3px] h-[0.9em] bg-zinc-900 dark:bg-zinc-100 ml-1 align-baseline animate-pulse" />
+            )}
+          </h1>
+          <p className="mt-6 text-lg text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto leading-relaxed">
+            Resulyze turns every job posting into a tailored resume, a polished cover letter, and a full interview prep kit. One workflow, zero guesswork.
+          </p>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/dashboard">
+              <Button size="lg" className="gap-2">
+                Start optimizing
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <a
+              href="https://github.com/vansh-codes/resulyze"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="lg" className="gap-2">
+                <Github className="w-4 h-4" />
+                View on GitHub
+              </Button>
+            </a>
           </div>
+          <p className="mt-6 text-sm text-zinc-400 dark:text-zinc-500">
+            Free, open-source, and powered by your own API key.
+          </p>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 md:py-32 relative bg-white/50">
-        <div className="container mx-auto px-4 relative">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-200/60 bg-blue-50/30 mb-6">
-              <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">Everything you need</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold text-gray-900 mb-4">
-              Your complete career toolkit
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              From resume building to interview prep, every tool works together to maximize your chances.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 stagger-children">
-            {[
-              {
-                icon: Target,
-                title: 'ATS Score Analysis',
-                description: 'Get detailed feedback on how well your resume passes through Applicant Tracking Systems.',
-                color: 'from-blue-100 to-blue-50',
-                iconColor: 'text-blue-600',
-                href: '/dashboard',
-              },
-              {
-                icon: FileText,
-                title: 'Resume Builder',
-                description: 'Create professional resumes with AI-powered suggestions for skills and experience.',
-                color: 'from-emerald-100 to-emerald-50',
-                iconColor: 'text-emerald-600',
-                href: '/dashboard',
-              },
-              {
-                icon: Users,
-                title: 'Cover Letters',
-                description: 'Generate personalized cover letters tailored to specific job descriptions.',
-                color: 'from-violet-100 to-violet-50',
-                iconColor: 'text-violet-600',
-                href: '/dashboard?tab=cover-letter',
-              },
-              {
-                icon: MessageSquare,
-                title: 'Referral Messages',
-                description: 'Craft professional networking messages to request referrals from connections.',
-                color: 'from-cyan-100 to-cyan-50',
-                iconColor: 'text-cyan-600',
-                href: '/dashboard?tab=cover-letter',
-              },
-              {
-                icon: Zap,
-                title: 'Interview Prep',
-                description: 'Practice with AI-generated questions based on your resume and target role.',
-                color: 'from-orange-100 to-orange-50',
-                iconColor: 'text-orange-600',
-                href: '/dashboard?tab=interview',
-              },
-            ].map((feature) => (
-              <Link key={feature.title} href={feature.href} className="group">
-                <div className="glass-card rounded-xl p-6 h-full">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
-                    <feature.icon className={`w-5 h-5 ${feature.iconColor}`} />
-                  </div>
-                  <h3 className="font-heading font-semibold text-gray-900 text-base mb-2">{feature.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
-                  <div className="mt-4 flex items-center gap-1 text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Try it now <ArrowRight className="w-3 h-3" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 md:py-32 relative">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-200/60 bg-blue-50/30 mb-6">
-              <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">Simple process</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold text-gray-900 mb-4">
-              Three steps to your dream job
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Upload, optimize, and apply with confidence.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto stagger-children">
-            {[
-              {
-                step: '01',
-                icon: Upload,
-                title: 'Upload Resume',
-                description: 'Upload your existing resume or create a new one from scratch with our intuitive builder.',
-              },
-              {
-                step: '02',
-                icon: Sparkles,
-                title: 'Get AI Feedback',
-                description: 'Receive instant analysis and optimization suggestions tailored to your target job.',
-              },
-              {
-                step: '03',
-                icon: TrendingUp,
-                title: 'Land Interviews',
-                description: 'Apply with your optimized resume, tailored cover letter, and interview preparation.',
-              },
-            ].map((item) => (
-              <div key={item.step} className="group relative">
-                <div className="glass-card rounded-xl p-8 h-full text-center">
-                  <div className="text-6xl font-heading font-bold text-gray-100 mb-6 group-hover:text-blue-100 transition-colors duration-300">
-                    {item.step}
-                  </div>
-                  <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-5 group-hover:bg-blue-100 transition-colors duration-300">
-                    <item.icon className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-heading font-semibold text-gray-900 text-lg mb-3">{item.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 md:py-32 relative bg-white/50">
-        <div className="container mx-auto px-4 relative">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-200/60 bg-blue-50/30 mb-6">
-              <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">Testimonials</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold text-gray-900 mb-4">
-              Trusted by professionals
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Success stories from people who transformed their careers.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto stagger-children">
-            {[
-              {
-                id: 'testimonial-1',
-                text: "Resulyze helped me optimize my resume and prepare for interviews. I landed a job at a top tech company within 2 weeks of using the platform!",
-                name: "Sarah Johnson",
-                role: "Software Engineer",
-                initials: "SJ",
-              },
-              {
-                id: 'testimonial-2',
-                text: "The ATS optimization feature is incredible. My application response rate increased by over 70% after using Resulyze.",
-                name: "Michael Chen",
-                role: "Marketing Manager",
-                initials: "MC",
-              },
-              {
-                id: 'testimonial-3',
-                text: "The interview preparation tool helped me feel confident and prepared. The AI-generated questions were spot on!",
-                name: "Jessica Williams",
-                role: "Data Analyst",
-                initials: "JW",
-              }
-            ].map((testimonial) => (
-              <div key={testimonial.id} className="glass-card rounded-xl p-8">
-                <div className="flex gap-1 mb-5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={`star-${testimonial.id}-${star}`} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-gray-600 leading-relaxed mb-6">
-                  &ldquo;{testimonial.text}&rdquo;
+      {/* Features */}
+      <section ref={revealRef} className="py-20 border-t border-zinc-100 dark:border-zinc-800/50">
+        <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-center text-zinc-900 dark:text-zinc-100 mb-4 reveal">
+            Everything you need, nothing you don&apos;t
+          </h2>
+          <p className="text-center text-zinc-500 dark:text-zinc-400 mb-12 max-w-lg mx-auto reveal">
+            Four focused tools that take you from job posting to interview-ready.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="reveal group p-6 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-card-hover transition-shadow duration-200"
+              >
+                <feature.icon className="w-5 h-5 text-zinc-400 mb-4" />
+                <h3 className="font-heading font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  {feature.description}
                 </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center">
-                    <span className="text-xs font-semibold text-blue-700">{testimonial.initials}</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">{testimonial.name}</p>
-                    <p className="text-xs text-gray-500">{testimonial.role}</p>
-                  </div>
-                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 md:py-32 relative">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto relative">
-            <div className="rounded-2xl p-10 md:p-16 text-center relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700">
-              {/* Background effects */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-400/10 rounded-full blur-3xl" />
-
-              <div className="relative">
-                <h2 className="text-3xl md:text-4xl font-heading font-bold text-white mb-4">
-                  Ready to land your dream job?
-                </h2>
-                <p className="text-lg text-blue-100 mb-8 max-w-xl mx-auto">
-                  Join professionals who have transformed their careers with AI-powered resume optimization.
-                </p>
-
-                <Link href="/dashboard">
-                  <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-base px-8 py-3 gap-2">
-                    Get Started Free
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-
-                <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-blue-100">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Free to get started</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>No credit card required</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Cancel anytime</span>
-                  </div>
+      {/* How It Works */}
+      <section className="py-20 border-t border-zinc-100 dark:border-zinc-800/50">
+        <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-center text-zinc-900 dark:text-zinc-100 mb-12">
+            Three steps. That&apos;s it.
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {steps.map((step) => (
+              <div key={step.num} className="text-center">
+                <div className="w-10 h-10 rounded-full border-2 border-zinc-200 dark:border-zinc-700 flex items-center justify-center mx-auto mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {step.num}
                 </div>
+                <h3 className="font-heading font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {step.description}
+                </p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
-    </>
+
+      {/* Open Source */}
+      <section className="py-20 border-t border-zinc-100 dark:border-zinc-800/50">
+        <div className="container mx-auto px-4 sm:px-6 max-w-2xl text-center">
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+            Built in the open
+          </h2>
+          <p className="text-zinc-500 dark:text-zinc-400 mb-6 max-w-lg mx-auto leading-relaxed">
+            Resulyze is fully open-source and runs on a bring-your-own-key model. Your Gemini API key never leaves your browser. No accounts, no tracking, no servers in between.
+          </p>
+          <a
+            href="https://github.com/vansh-codes/resulyze"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="lg" className="gap-2">
+              <Github className="w-4 h-4" />
+              Star on GitHub
+            </Button>
+          </a>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 bg-zinc-900 dark:bg-zinc-100">
+        <div className="container mx-auto px-4 sm:px-6 max-w-2xl text-center">
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-white dark:text-zinc-900 mb-4">
+            Your next application deserves better
+          </h2>
+          <p className="text-zinc-400 dark:text-zinc-600 mb-8">
+            No sign-up required. Free forever. Start in under a minute.
+          </p>
+          <Link href="/dashboard">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-zinc-600 bg-transparent text-white hover:bg-zinc-800 hover:text-white dark:border-zinc-300 dark:bg-transparent dark:text-zinc-900 dark:hover:bg-zinc-200 gap-2"
+            >
+              Open Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+    </div>
   )
 }

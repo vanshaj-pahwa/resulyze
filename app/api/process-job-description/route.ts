@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not defined")
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+import { getGeminiClient } from '@/lib/gemini'
 
 // Function to fetch job description from URL
 async function fetchJobDescriptionFromUrl(url: string): Promise<string> {
@@ -44,6 +38,7 @@ async function fetchJobDescriptionFromUrl(url: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    const genAI = getGeminiClient(request)
     const { jobDescription, jobDescriptionUrl } = await request.json()
 
     // Handle job description from URL if provided

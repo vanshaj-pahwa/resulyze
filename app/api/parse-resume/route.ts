@@ -1,16 +1,11 @@
 "use server";
 
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not defined");
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+import { getGeminiClient } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
+    const genAI = getGeminiClient(request)
     // Extract file from form data
     const formData = await request.formData();
     const resumeFile = formData.get('resumeFile') as File | null;

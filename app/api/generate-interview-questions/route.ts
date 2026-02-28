@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getGeminiClient } from '@/lib/gemini'
 
 const DEFAULT_USER_ID = 'default-user'
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not defined")
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -116,6 +110,7 @@ const generateFallbackQuestions = (jobData: any, resumeData: any) => {
 
 export async function POST(request: NextRequest) {
   try {
+    const genAI = getGeminiClient(request)
     const { jobData, resumeData, interviewRound, roundName, roundDetails } = await request.json();
       
       if (!jobData || !resumeData) {

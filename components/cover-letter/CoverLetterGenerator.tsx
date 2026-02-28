@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Loader2, Copy, Download, Mail, AlertCircle } from 'lucide-react'
+import { fetchWithKey } from '@/lib/fetch'
 
 interface CoverLetterGeneratorProps {
   readonly jobData: any
@@ -42,9 +43,8 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
 
     setIsGenerating(true)
     try {
-      const response = await fetch('/api/generate-cover-letter', {
+      const response = await fetchWithKey('/api/generate-cover-letter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobData, resumeData })
       })
 
@@ -65,9 +65,8 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
 
     setIsGenerating(true)
     try {
-      const response = await fetch('/api/generate-referral-message', {
+      const response = await fetchWithKey('/api/generate-referral-message', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jobData,
           resumeData,
@@ -283,7 +282,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                       Download
                     </Button>
                     {contactEmail && (
-                      <Button variant="outline" onClick={sendEmail} className="w-full xs:w-auto bg-blue-50 hover:bg-blue-100">
+                      <Button variant="outline" onClick={sendEmail} className="w-full xs:w-auto bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700">
                         <Mail className="w-4 h-4 mr-2" />
                         Send Email
                       </Button>
