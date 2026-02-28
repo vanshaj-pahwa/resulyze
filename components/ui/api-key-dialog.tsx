@@ -88,9 +88,11 @@ export function ApiKeyDialog({ open, onOpenChange, dismissible = true }: ApiKeyD
             </div>
 
             {status === 'error' && (
-              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
+              <div className="max-h-32 overflow-y-auto rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3">
+                <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="break-words overflow-wrap-anywhere">{errorMsg}</span>
+                </div>
               </div>
             )}
 
