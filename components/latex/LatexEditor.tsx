@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
 import { useChatLatex } from '@/hooks/useChatLatex'
 import { useResumeVersions } from '@/hooks/useResumeVersions'
+import { ShortcutsDialog } from '@/components/ui/shortcuts-dialog'
 
 const CodePanel = dynamic(() => import('./CodePanel'), { ssr: false })
 const PreviewPanel = dynamic(() => import('./PreviewPanel'), { ssr: false })
@@ -44,6 +45,11 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const [compilationError, setCompilationError] = useState<string | null>(null)
   const prevBlobUrl = useRef<string | null>(null)
 
+  // Auto-title generation state
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const userEditedTitle = useRef(!!resumeTitle)
+
   // Optimization state
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [optimizationChanges, setOptimizationChanges] = useState<string[]>([])
@@ -63,7 +69,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     latexSource,
     jobData,
     onApplyChanges: useCallback((newLatex: string) => {
-      saveVersion(latexSource, resumeTitle, 'Before AI chat changes')
+      saveVersion(latexSource, resumeTitle, 'Pre-chat edit')
       setPreviousLatex(latexSource)
       setLatexSource(newLatex)
       setPendingCompile(true)
@@ -91,6 +97,59 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       localStorage.removeItem(TITLE_STORAGE_KEY)
     }
   }, [resumeTitle])
+
+  // Auto-generate title on mount when title is empty and resume is custom
+  useEffect(() => {
+    if (userEditedTitle.current) return
+
+    const savedTitle = localStorage.getItem(TITLE_STORAGE_KEY)
+    if (savedTitle) return
+
+    const savedLatex = localStorage.getItem(STORAGE_KEY)
+    if (!savedLatex) return // still on default template
+
+    setIsGeneratingTitle(true)
+
+    const aborted = { current: false }
+
+    fetchWithKey('/api/generate-resume-title', {
+      method: 'POST',
+      body: JSON.stringify({ latexSource: savedLatex }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (aborted.current || !data.title || userEditedTitle.current) {
+          setIsGeneratingTitle(false)
+          return
+        }
+
+        // Typewriter animation
+        const fullTitle = data.title
+        let i = 0
+        typewriterRef.current = setInterval(() => {
+          if (userEditedTitle.current || aborted.current) {
+            if (typewriterRef.current) clearInterval(typewriterRef.current)
+            typewriterRef.current = null
+            setIsGeneratingTitle(false)
+            return
+          }
+          i++
+          setResumeTitle(fullTitle.slice(0, i))
+          if (i >= fullTitle.length) {
+            if (typewriterRef.current) clearInterval(typewriterRef.current)
+            typewriterRef.current = null
+            setIsGeneratingTitle(false)
+          }
+        }, 40)
+      })
+      .catch(() => setIsGeneratingTitle(false))
+
+    return () => {
+      aborted.current = true
+      if (typewriterRef.current) clearInterval(typewriterRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCompile = useCallback(async () => {
     if (isCompiling) return
@@ -160,7 +219,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       }
 
       if (data.optimizedLatex && data.optimizedLatex !== latexSource) {
-        saveVersion(latexSource, resumeTitle, 'Before JD optimization')
+        saveVersion(latexSource, resumeTitle, 'Pre-optimization')
         setLatexSource(data.optimizedLatex)
         setOptimizationChanges(data.changes || [])
         setShowChangesPanel(true)
@@ -190,7 +249,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   }, [previousLatex])
 
   const handleRestoreVersion = useCallback((latex: string) => {
-    saveVersion(latexSource, resumeTitle, 'Before restore')
+    saveVersion(latexSource, resumeTitle, 'Pre-restore')
     setLatexSource(latex)
     setPendingCompile(true)
     setShowHistory(false)
@@ -239,18 +298,33 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
         {/* Left: Code Editor */}
         <div className={`${isChatOpen ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-latex-editor min-w-0 relative transition-all duration-200`}>
           {/* Tab bar */}
-          <div className="h-10 bg-latex-toolbar flex items-center justify-between px-2 border-b border-latex-border shrink-0">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <FileText className="w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="text"
-                value={resumeTitle}
-                onChange={(e) => setResumeTitle(e.target.value)}
-                placeholder="Untitled Resume"
-                className="text-xs text-white font-mono bg-transparent border-none outline-none placeholder:text-zinc-500 w-32 sm:w-48"
-              />
+          <div className="h-10 bg-latex-toolbar flex items-center justify-between px-2 border-b border-latex-border shrink-0 overflow-hidden">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <FileText className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <div className="relative min-w-0">
+                <input
+                  type="text"
+                  value={resumeTitle}
+                  onChange={(e) => {
+                    userEditedTitle.current = true
+                    if (typewriterRef.current) {
+                      clearInterval(typewriterRef.current)
+                      typewriterRef.current = null
+                      setIsGeneratingTitle(false)
+                    }
+                    setResumeTitle(e.target.value)
+                  }}
+                  placeholder={isGeneratingTitle ? '' : 'Untitled Resume'}
+                  className={`text-xs text-white font-mono bg-transparent border-none outline-none placeholder:text-zinc-500 min-w-0 ${isChatOpen ? 'w-28 sm:w-36' : 'w-40 sm:w-56'} ${isGeneratingTitle ? 'caret-transparent' : ''}`}
+                />
+                {isGeneratingTitle && !resumeTitle && (
+                  <span className="absolute inset-0 flex items-center text-xs font-mono text-zinc-500 animate-pulse pointer-events-none">
+                    Generating title...
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {/* Optimize for JD button */}
               <TooltipProvider>
                 <Tooltip>
@@ -258,7 +332,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                     <button
                       onClick={handleOptimize}
                       disabled={!jobData || isOptimizing}
-                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap
+                      className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap
                         ${jobData
                           ? 'text-zinc-200 hover:text-white hover:bg-white/10 border border-zinc-600'
                           : 'text-zinc-600 cursor-not-allowed border border-zinc-700'
@@ -271,7 +345,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       ) : (
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
                       )}
-                      <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize for JD'}</span>
+                      {!isChatOpen && <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize for JD'}</span>}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -289,7 +363,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => setShowHistory(prev => !prev)}
-                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border
+                      className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border
                         ${showHistory
                           ? 'text-white bg-white/10 border-zinc-500'
                           : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/10 border-zinc-700'
@@ -297,12 +371,15 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       `}
                     >
                       <Clock className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden sm:inline">History</span>
+                      {!isChatOpen && <span className="hidden sm:inline">History</span>}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Version history</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              {/* Shortcuts */}
+              <ShortcutsDialog compact={isChatOpen} />
             </div>
           </div>
 

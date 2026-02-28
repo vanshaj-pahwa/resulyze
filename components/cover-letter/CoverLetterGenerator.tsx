@@ -7,8 +7,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Loader2, Copy, Download, Mail, AlertCircle } from 'lucide-react'
+import { Loader2, Copy, Download, Mail, AlertCircle, FileDown } from 'lucide-react'
 import { fetchWithKey } from '@/lib/fetch'
+import { jsPDF } from 'jspdf'
 
 interface CoverLetterGeneratorProps {
   readonly jobData: any
@@ -101,6 +102,26 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
     document.body.removeChild(a)
   }
 
+  const downloadAsPdf = (content: string, filename: string) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const margin = 20
+    const pageWidth = doc.internal.pageSize.getWidth() - margin * 2
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    const lines = doc.splitTextToSize(content, pageWidth) as string[]
+    let y = margin
+    const lineHeight = 5.5
+    for (const line of lines) {
+      if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+        doc.addPage()
+        y = margin
+      }
+      doc.text(line, margin, y)
+      y += lineHeight
+    }
+    doc.save(`${filename}.pdf`)
+  }
+
   const sendEmail = () => {
     if (!contactEmail || !referralMessage) {
       alert('Please provide contact email and generate referral message first')
@@ -178,9 +199,13 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                       <Copy className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
+                    <Button variant="outline" onClick={() => downloadAsPdf(coverLetter, 'cover-letter')} className="flex-1 sm:flex-none">
+                      <FileDown className="w-4 h-4 mr-2" />
+                      PDF
+                    </Button>
                     <Button variant="outline" onClick={() => downloadAsDoc(coverLetter, 'cover-letter')} className="flex-1 sm:flex-none">
                       <Download className="w-4 h-4 mr-2" />
-                      Download
+                      TXT
                     </Button>
                   </>
                 )}
@@ -277,9 +302,13 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                       <Copy className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
+                    <Button variant="outline" onClick={() => downloadAsPdf(referralMessage, 'referral-message')} className="w-full xs:w-auto">
+                      <FileDown className="w-4 h-4 mr-2" />
+                      PDF
+                    </Button>
                     <Button variant="outline" onClick={() => downloadAsDoc(referralMessage, 'referral-message')} className="w-full xs:w-auto">
                       <Download className="w-4 h-4 mr-2" />
-                      Download
+                      TXT
                     </Button>
                     {contactEmail && (
                       <Button variant="outline" onClick={sendEmail} className="w-full xs:w-auto bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700">

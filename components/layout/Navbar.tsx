@@ -1,14 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, Github } from 'lucide-react'
+import { Menu, X, Github, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { ApiKeyIndicator } from '@/components/ui/api-key-indicator'
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [hasResume, setHasResume] = useState(false)
+
+  useEffect(() => {
+    setHasResume(!!localStorage.getItem('resulyze-latex-source'))
+  }, [])
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
@@ -30,7 +34,15 @@ export default function Navbar() {
               <Github className="w-4 h-4" />
               <span>GitHub</span>
             </a>
-            <ApiKeyIndicator />
+            {hasResume && (
+              <Link
+                href="/dashboard/resume"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Your Resume</span>
+              </Link>
+            )}
             <ThemeToggle />
             <Link href="/dashboard">
               <Button size="sm">Dashboard</Button>
@@ -63,9 +75,16 @@ export default function Navbar() {
               <Github className="w-4 h-4" />
               GitHub
             </a>
-            <div className="px-3 py-1">
-              <ApiKeyIndicator />
-            </div>
+            {hasResume && (
+              <Link
+                href="/dashboard/resume"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
+                <FileText className="w-4 h-4" />
+                Your Resume
+              </Link>
+            )}
             <div className="px-3 pt-2">
               <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
                 <Button className="w-full" size="sm">Dashboard</Button>

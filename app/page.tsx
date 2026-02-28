@@ -187,7 +187,7 @@ export default function Home() {
       <section ref={revealRef} className="py-20 border-t border-zinc-100 dark:border-zinc-800/50">
         <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-center text-zinc-900 dark:text-zinc-100 mb-4 reveal">
-            Everything you need, nothing you don&apos;t
+            Four tools. One workflow.
           </h2>
           <p className="text-center text-zinc-500 dark:text-zinc-400 mb-12 max-w-lg mx-auto reveal">
             Four focused tools that take you from job posting to interview-ready.
