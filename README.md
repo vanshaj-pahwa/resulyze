@@ -75,10 +75,6 @@ Open [http://localhost:3000](http://localhost:3000) — no `.env` file needed fo
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## Code of Conduct
-
-This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
-
 ## License
 
 [MIT](LICENSE) © Vanshaj Pahwa
