@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +15,7 @@ interface JobDescriptionProcessorProps {
 }
 
 export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly<JobDescriptionProcessorProps>) {
+  const router = useRouter()
   const [jobDescription, setJobDescription] = useState('')
   const [jobDescriptionUrl, setJobDescriptionUrl] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -231,7 +233,7 @@ export default function JobDescriptionProcessor({ onJobDataExtracted }: Readonly
           
           <div className="flex justify-center sm:justify-end mt-4">
             <Button 
-              onClick={() => window.dispatchEvent(new CustomEvent('move-to-resume-optimization'))}
+              onClick={() => router.push('/dashboard/resume')}
               className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 w-full sm:w-auto text-sm xs:text-base"
             >
               <span className="hidden xs:inline">Optimize My Resume Based on This Analysis</span>

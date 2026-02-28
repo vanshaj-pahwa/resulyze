@@ -1,5 +1,5 @@
-import DashboardClient from '@/components/dashboard/DashboardClient'
+import { redirect } from 'next/navigation'
 
 export default function DashboardPage() {
-  return <DashboardClient />
+  redirect('/dashboard/job-analysis')
 }

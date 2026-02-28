@@ -21,6 +21,7 @@ interface LatexEditorProps {
 }
 
 const STORAGE_KEY = 'resulyze-latex-source'
+const TITLE_STORAGE_KEY = 'resulyze-resume-title'
 
 export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditorProps) {
   const [latexSource, setLatexSource] = useState<string>(() => {
@@ -29,6 +30,12 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       if (saved) return saved
     }
     return DEFAULT_LATEX_SOURCE
+  })
+  const [resumeTitle, setResumeTitle] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(TITLE_STORAGE_KEY) || ''
+    }
+    return ''
   })
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [isCompiling, setIsCompiling] = useState(false)
@@ -69,6 +76,15 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     return () => clearTimeout(timeout)
   }, [latexSource])
 
+  // Persist resume title
+  useEffect(() => {
+    if (resumeTitle) {
+      localStorage.setItem(TITLE_STORAGE_KEY, resumeTitle)
+    } else {
+      localStorage.removeItem(TITLE_STORAGE_KEY)
+    }
+  }, [resumeTitle])
+
   const handleCompile = useCallback(async () => {
     if (isCompiling) return
     setIsCompiling(true)
@@ -106,13 +122,16 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
   const handleDownload = useCallback(() => {
     if (!pdfBlobUrl) return
+    const filename = resumeTitle
+      ? resumeTitle.replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_')
+      : 'resume'
     const a = document.createElement('a')
     a.href = pdfBlobUrl
-    a.download = 'resume.pdf'
+    a.download = `${filename}.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [pdfBlobUrl])
+  }, [pdfBlobUrl, resumeTitle])
 
   const handleOptimize = useCallback(async () => {
     if (isOptimizing || !jobData) return
@@ -207,7 +226,13 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
           <div className="h-10 bg-latex-toolbar flex items-center justify-between px-2 border-b border-latex-border shrink-0">
             <div className="flex items-center gap-1.5 shrink-0">
               <FileText className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-xs text-white font-mono">main.tex</span>
+              <input
+                type="text"
+                value={resumeTitle}
+                onChange={(e) => setResumeTitle(e.target.value)}
+                placeholder="Untitled Resume"
+                className="text-xs text-white font-mono bg-transparent border-none outline-none placeholder:text-zinc-500 w-32 sm:w-48"
+              />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {/* Optimize for JD button */}
