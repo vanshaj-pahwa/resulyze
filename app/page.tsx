@@ -150,7 +150,7 @@ export default function Home() {
               </Button>
             </Link>
             <a
-              href="https://github.com/vansh-codes/resulyze"
+              href="https://github.com/vanshaj-pahwa/resulyze"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -228,7 +228,7 @@ export default function Home() {
             Resulyze is fully open-source and runs on a bring-your-own-key model. Your Gemini API key never leaves your browser. No accounts, no tracking, no servers in between.
           </p>
           <a
-            href="https://github.com/vansh-codes/resulyze"
+            href="https://github.com/vanshaj-pahwa/resulyze"
             target="_blank"
             rel="noopener noreferrer"
           >

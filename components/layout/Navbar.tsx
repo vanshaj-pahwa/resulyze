@@ -22,7 +22,7 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-1">
             <a
-              href="https://github.com/vansh-codes/resulyze"
+              href="https://github.com/vanshaj-pahwa/resulyze"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
@@ -55,7 +55,7 @@ export default function Navbar() {
         {mobileOpen && (
           <div className="md:hidden border-t border-zinc-100 dark:border-zinc-800 py-3 space-y-1 animate-fade-in">
             <a
-              href="https://github.com/vansh-codes/resulyze"
+              href="https://github.com/vanshaj-pahwa/resulyze"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800"

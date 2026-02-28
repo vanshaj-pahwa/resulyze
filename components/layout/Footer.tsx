@@ -13,7 +13,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
             <a
-              href="https://github.com/vansh-codes/resulyze"
+              href="https://github.com/vanshaj-pahwa/resulyze"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
