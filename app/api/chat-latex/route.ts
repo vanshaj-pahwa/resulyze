@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       }
       // Fallback: if no BEFORE/AFTER pairs found, treat lines as plain descriptions
       if (changes.length === 0) {
-        const lines = changesText.split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean)
+        const lines = changesText.split('\n').map((l: string) => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean)
         for (const line of lines) {
           changes.push({ before: '', after: line })
         }
