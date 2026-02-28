@@ -19,10 +19,22 @@
 
 ## Features
 
+### Four tools. One workflow.
+
 - **Intelligent Job Analysis** — Paste any job posting. AI extracts the skills, qualifications, and keywords that matter.
-- **LaTeX Resume Editor + Resulyze AI** — Write in LaTeX with live preview. Chat with the AI assistant to optimize your resume against the job description in real time.
-- **Cover Letters & Referrals** — Generate role-specific cover letters and concise referral messages that sound like you, not a template.
+- **LaTeX Resume Editor + Resulyze AI** — Write in LaTeX with live PDF preview. Chat with the AI assistant to optimize your resume against the job description in real time.
+- **Cover Letters & Referrals** — Generate role-specific cover letters and referral messages. Export as PDF or plain text. Send directly via email.
 - **Interview Preparation** — Practice with AI-generated questions drawn from the actual job requirements, complete with model answers and company research.
+
+### Built to keep your flow
+
+- **Route-based navigation** — Each step lives at its own URL. Refresh the page or share a link — you'll land right where you left off.
+- **Resume versioning** — Every AI optimization and chat edit is auto-saved with a timestamp. Restore any previous version in one click.
+- **AI-generated resume titles** — Titles are auto-generated from your resume content. Edit anytime.
+- **Persistent state** — Job analysis, resume, chat history, and step progress all survive page refreshes via localStorage.
+- **Canvas PDF preview** — High-fidelity PDF rendering powered by pdf.js with zoom controls, retina support, and responsive resizing.
+- **Keyboard shortcuts** — `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat, plus standard editor bindings.
+- **Smart landing page** — Returning users see a "Continue editing your resume" shortcut to jump straight back in.
 
 ## Bring Your Own Key (BYOK)
 
@@ -42,6 +54,7 @@ Resulyze runs entirely in your browser with **your own Gemini API key**.
 | Language | TypeScript 5 |
 | UI | React 18, Radix UI, Tailwind CSS |
 | Editor | CodeMirror 6 (LaTeX) |
+| PDF | pdf.js (CDN), jsPDF |
 | AI | Google Gemini API |
 | Rich Text | Tiptap |
 | Export | jsPDF, docx |
@@ -68,8 +81,9 @@ Open [http://localhost:3000](http://localhost:3000) — no `.env` file needed fo
 ## How It Works
 
 1. **Paste the job description** — Skills, requirements, and keywords are extracted automatically.
-2. **Refine your resume** — AI suggestions align every detail to the specific role.
-3. **Prepare with confidence** — Cover letters, referral messages, and interview questions, ready in minutes.
+2. **Refine your resume** — AI suggestions align every bullet point to the specific role. Version history tracks every change.
+3. **Generate cover letters** — Tailored letters and referral messages, exportable as PDF or plain text.
+4. **Prepare with confidence** — Practice interviews with AI-generated questions based on the actual job posting.
 
 ## Contributing
 
