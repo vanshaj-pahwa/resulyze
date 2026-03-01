@@ -269,13 +269,13 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
         ) : !error && !isCompiling ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-3">
-              <div className="w-16 h-16 mx-auto rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
-                <RefreshCw className="w-7 h-7 text-zinc-400" />
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-zinc-300/60 dark:bg-zinc-700/60 flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
               </div>
               <div>
-                <p className="text-zinc-500 font-medium">No PDF preview yet</p>
-                <p className="text-zinc-400 text-sm mt-1">
-                  Click <strong>Compile</strong> or press <kbd className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 rounded text-xs font-mono">Ctrl+Enter</kbd>
+                <p className="text-zinc-600 dark:text-zinc-300 font-medium text-[15px]">No PDF preview yet</p>
+                <p className="text-zinc-400 dark:text-zinc-500 text-sm mt-1">
+                  Click <strong className="text-zinc-500 dark:text-zinc-400">Compile</strong> or press <kbd className="px-1.5 py-0.5 bg-zinc-300/70 dark:bg-zinc-700 rounded text-[11px] font-mono text-zinc-500 dark:text-zinc-400">Ctrl+Enter</kbd>
                 </p>
               </div>
             </div>

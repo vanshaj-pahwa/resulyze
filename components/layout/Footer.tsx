@@ -5,7 +5,7 @@ import { Github } from "lucide-react"
 export default function Footer() {
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800">
-      <div className="container mx-auto px-4 sm:px-6 py-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-[1800px] mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/" className="font-heading font-semibold text-sm text-zinc-900 dark:text-zinc-100">
             Resulyze

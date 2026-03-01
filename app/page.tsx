@@ -23,7 +23,7 @@ const features = [
   {
     icon: Code2,
     title: 'LaTeX Resume Editor',
-    description: 'Write in LaTeX, preview in real time. One click optimizes your resume against the job description so every bullet point earns its place.',
+    description: 'No LaTeX experience needed. Write or let AI handle the code. Preview in real time, optimize against any job description, and build an ATS-friendly resume.',
   },
   {
     icon: PenSquare,

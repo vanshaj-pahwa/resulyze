@@ -2,13 +2,17 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, Github, FileText } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Menu, X, Github, FileText, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [hasResume, setHasResume] = useState(false)
+  const pathname = usePathname()
+  const isDashboard = pathname.startsWith('/dashboard')
+  const isResumePage = pathname === '/dashboard/resume'
 
   useEffect(() => {
     setHasResume(!!localStorage.getItem('resulyze-latex-source'))
@@ -16,7 +20,7 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
-      <div className="container mx-auto px-4 sm:px-6">
+      <div className="px-4 sm:px-6 lg:px-8 max-w-[1800px] mx-auto">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="font-heading font-bold text-xl tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -34,7 +38,7 @@ export default function Navbar() {
               <Github className="w-4 h-4" />
               <span>GitHub</span>
             </a>
-            {hasResume && (
+            {hasResume && !isResumePage && (
               <Link
                 href="/dashboard/resume"
                 className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
@@ -44,9 +48,18 @@ export default function Navbar() {
               </Link>
             )}
             <ThemeToggle />
-            <Link href="/dashboard">
-              <Button size="sm">Dashboard</Button>
-            </Link>
+            {isDashboard ? (
+              <Link href="/">
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Home className="w-3.5 h-3.5" />
+                  Home
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/dashboard">
+                <Button size="sm">Dashboard</Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -75,7 +88,7 @@ export default function Navbar() {
               <Github className="w-4 h-4" />
               GitHub
             </a>
-            {hasResume && (
+            {hasResume && !isResumePage && (
               <Link
                 href="/dashboard/resume"
                 onClick={() => setMobileOpen(false)}
@@ -86,9 +99,18 @@ export default function Navbar() {
               </Link>
             )}
             <div className="px-3 pt-2">
-              <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
-                <Button className="w-full" size="sm">Dashboard</Button>
-              </Link>
+              {isDashboard ? (
+                <Link href="/" onClick={() => setMobileOpen(false)}>
+                  <Button className="w-full gap-1.5" size="sm" variant="outline">
+                    <Home className="w-3.5 h-3.5" />
+                    Home
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
+                  <Button className="w-full" size="sm">Dashboard</Button>
+                </Link>
+              )}
             </div>
           </div>
         )}

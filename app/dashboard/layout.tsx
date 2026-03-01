@@ -54,21 +54,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
 
       {/* Dashboard Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 py-6">
-        <div className="container mx-auto px-4 sm:px-6">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 py-4">
+        <div className="px-4 sm:px-6 lg:px-8 max-w-[1800px] mx-auto">
           <h1 className="font-heading font-bold text-zinc-900 dark:text-zinc-100">
             Resume Optimizer
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
             Follow the steps to create the perfect job application
           </p>
         </div>
       </div>
 
-      <main className="container mx-auto px-4 sm:px-6 py-6">
+      <main className="px-4 sm:px-6 lg:px-8 py-4 max-w-[1800px] mx-auto">
         {/* Step Navigation */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center overflow-x-auto no-scrollbar gap-1 border-b border-zinc-200 dark:border-zinc-800 -mb-px">
               {STEPS.map((step, index) => {
                 const disabled = isStepDisabled(step)

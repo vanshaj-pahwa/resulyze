@@ -6,7 +6,7 @@ import { EditorState } from '@codemirror/state'
 import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands'
 import { bracketMatching, foldGutter, indentOnInput, StreamLanguage } from '@codemirror/language'
 import { stex } from '@codemirror/legacy-modes/mode/stex'
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+import { search, searchKeymap, highlightSelectionMatches, openSearchPanel } from '@codemirror/search'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 
@@ -70,6 +70,87 @@ const prismDarkTheme = EditorView.theme({
     overflow: 'auto',
     lineHeight: '1.6',
   },
+  '& .cm-panels': {
+    backgroundColor: '#1a1a1a',
+    color: '#ccc',
+  },
+  '& .cm-panels-top': {
+    borderBottom: '1px solid #2a2a2a',
+  },
+  '& .cm-search': {
+    padding: '8px 12px',
+    fontSize: '13px',
+  },
+  '& .cm-search label': {
+    color: '#999',
+    fontSize: '12px',
+  },
+  '& .cm-textfield': {
+    backgroundColor: '#252525 !important',
+    color: '#e0e0e0 !important',
+    border: '1px solid #3a3a3a !important',
+    borderRadius: '4px !important',
+    padding: '4px 8px !important',
+    fontSize: '13px !important',
+    outline: 'none',
+  },
+  '& .cm-textfield:focus': {
+    borderColor: '#515c6a !important',
+  },
+  '& .cm-button': {
+    backgroundColor: '#2a2a2a !important',
+    color: '#ccc !important',
+    border: '1px solid #3a3a3a !important',
+    borderRadius: '4px !important',
+    cursor: 'pointer',
+    padding: '3px 10px !important',
+    fontSize: '12px !important',
+    backgroundImage: 'none !important',
+  },
+  '& .cm-button:hover': {
+    backgroundColor: '#3a3a3a !important',
+    color: '#fff !important',
+  },
+  '& .cm-search input[type=checkbox]': {
+    appearance: 'none',
+    width: '14px',
+    height: '14px',
+    border: '1px solid #555',
+    borderRadius: '3px',
+    backgroundColor: '#252525',
+    cursor: 'pointer',
+    verticalAlign: 'middle',
+    position: 'relative',
+  },
+  '& .cm-search input[type=checkbox]:checked': {
+    backgroundColor: '#515c6a',
+    borderColor: '#515c6a',
+  },
+  '& .cm-search input[type=checkbox]:checked::after': {
+    content: '""',
+    position: 'absolute',
+    left: '4px',
+    top: '1px',
+    width: '4px',
+    height: '8px',
+    border: 'solid #fff',
+    borderWidth: '0 2px 2px 0',
+    transform: 'rotate(45deg)',
+  },
+  '& .cm-search button[name=close]': {
+    color: '#666',
+    fontSize: '18px',
+    padding: '0 6px',
+    border: 'none !important',
+    backgroundColor: 'transparent !important',
+  },
+  '& .cm-search button[name=close]:hover': {
+    color: '#e0e0e0',
+    backgroundColor: 'transparent !important',
+  },
+  '& .cm-search br': {
+    display: 'none',
+  },
 })
 
 // Syntax highlighting matching Prism's LaTeX colors
@@ -95,9 +176,10 @@ interface CodePanelProps {
   value: string
   onChange: (value: string) => void
   onCompile: () => void
+  searchTrigger?: number
 }
 
-export default function CodePanel({ value, onChange, onCompile }: CodePanelProps) {
+export default function CodePanel({ value, onChange, onCompile, searchTrigger }: CodePanelProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -127,6 +209,7 @@ export default function CodePanel({ value, onChange, onCompile }: CodePanelProps
         indentOnInput(),
         history(),
         highlightSelectionMatches(),
+        search({ top: true }),
         StreamLanguage.define(stex),
         prismDarkTheme,
         syntaxHighlighting(prismHighlightStyle),
@@ -177,6 +260,13 @@ export default function CodePanel({ value, onChange, onCompile }: CodePanelProps
       })
     }
   }, [value])
+
+  // Open search panel when searchTrigger changes
+  useEffect(() => {
+    if (searchTrigger && viewRef.current) {
+      openSearchPanel(viewRef.current)
+    }
+  }, [searchTrigger])
 
   return <div ref={editorRef} className="h-full w-full overflow-hidden" />
 }

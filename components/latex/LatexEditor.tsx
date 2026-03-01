@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
-import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock } from 'lucide-react'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
@@ -44,9 +44,11 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const [isCompiling, setIsCompiling] = useState(false)
   const [compilationError, setCompilationError] = useState<string | null>(null)
   const prevBlobUrl = useRef<string | null>(null)
+  const [searchTrigger, setSearchTrigger] = useState(0)
 
   // Auto-title generation state
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
+  const [showLatexHint, setShowLatexHint] = useState(false)
   const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const userEditedTitle = useRef(!!resumeTitle)
 
@@ -256,6 +258,13 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     toast.success('Version restored')
   }, [latexSource, resumeTitle, saveVersion])
 
+  // Show LaTeX hint on mount if not dismissed
+  useEffect(() => {
+    if (!localStorage.getItem('resulyze-latex-hint-dismissed')) {
+      setShowLatexHint(true)
+    }
+  }, [])
+
   // Auto-compile when pendingCompile is set (initial load + after optimization)
   useEffect(() => {
     if (pendingCompile && !isCompiling) {
@@ -293,7 +302,29 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   }, [chat])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-180px)] min-h-[500px] rounded-lg overflow-hidden border border-latex-border shadow-lg">
+    <div className="flex flex-col gap-3">
+      {/* New to LaTeX hint */}
+      {showLatexHint && (
+        <div className="flex items-center gap-3 px-4 py-3 mx-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+          <MessageSquare className="w-4 h-4 text-blue-400 dark:text-blue-500 shrink-0" />
+          <p className="flex-1 text-[13px] text-blue-700 dark:text-blue-300">
+            <span className="font-semibold">New to LaTeX?</span>
+            {' '}No worries. Open the AI chat with
+            <kbd className="mx-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 rounded text-[11px] font-mono text-blue-500 dark:text-blue-400">Ctrl+Shift+L</kbd>
+            and tell it your details. It writes the LaTeX for you.
+          </p>
+          <button
+            onClick={() => {
+              setShowLatexHint(false)
+              localStorage.setItem('resulyze-latex-hint-dismissed', '1')
+            }}
+            className="p-1 text-blue-300 hover:text-blue-500 dark:text-blue-600 dark:hover:text-blue-400 rounded transition-colors shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      <div className={`flex flex-col ${showLatexHint ? 'h-[calc(100vh-195px)]' : 'h-[calc(100vh-150px)]'} min-h-[500px] rounded-lg overflow-hidden border border-latex-border shadow-lg transition-all duration-200`}>
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left: Code Editor */}
         <div className={`${isChatOpen ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-latex-editor min-w-0 relative transition-all duration-200`}>
@@ -378,6 +409,21 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Search in editor */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setSearchTrigger(t => t + 1)}
+                      className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border text-zinc-400 hover:text-zinc-200 hover:bg-white/10 border-zinc-700"
+                    >
+                      <Search className="w-3.5 h-3.5 shrink-0" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Search (Ctrl+F)</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Shortcuts */}
               <ShortcutsDialog compact={isChatOpen} />
             </div>
@@ -428,6 +474,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               value={latexSource}
               onChange={setLatexSource}
               onCompile={handleCompile}
+              searchTrigger={searchTrigger}
             />
           </div>
 
@@ -490,6 +537,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
             />
           )}
         </div>
+      </div>
       </div>
     </div>
   )
