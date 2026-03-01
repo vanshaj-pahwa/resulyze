@@ -5,67 +5,52 @@
 <h1 align="center">Resulyze</h1>
 
 <p align="center">
-  AI-powered career toolkit that turns any job posting into a tailored resume, cover letter, and interview prep — in minutes.
+  <strong>Paste a job posting. Get a tailored LaTeX resume, cover letter, and interview prep.</strong><br/>
+  No sign-up. No tracking. Just your Gemini API key and your browser.
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/Next.js-14-black" alt="Next.js 14" />
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6" alt="TypeScript" />
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" /></a>
+  <a href="https://smartresulyze.vercel.app"><img src="https://img.shields.io/badge/Live-smartresulyze.vercel.app-black?style=flat-square" alt="Live Demo" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/Next.js-14-black?style=flat-square" alt="Next.js 14" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square" alt="TypeScript" />
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome" /></a>
 </p>
+
+---
+
+## What is Resulyze?
+
+Resulyze is an AI-powered career toolkit with four steps:
+
+- **Job Analysis** extracts skills, qualifications, and keywords from any job posting
+- **Resume Editor** lets you write LaTeX with a live PDF preview and an AI chat that optimizes your resume for ATS and the specific job description
+- **Cover Letters & Referrals** generates role-specific letters exportable as PDF, plain text, or directly via email
+- **Interview Prep** creates practice questions from the actual job requirements with model answers and company research
+
+> **New to LaTeX?** No problem. Just paste your details and let the AI handle the formatting and LaTeX coding. You get a clean, ATS-friendly resume without writing a single LaTeX command.
+
+Everything runs in your browser. Bring your own Gemini API key.
 
 ---
 
 ## Features
 
-### Four tools. One workflow.
+| Feature | What it does |
+|---------|-------------|
+| **AI Chat Assistant** | Chat with AI to rewrite, optimize, and tailor your resume for ATS and recruiters |
+| **Live PDF Preview** | High-fidelity canvas rendering with zoom, retina support, and responsive resizing |
+| **Resume Versioning** | Every AI edit is auto-saved with a timestamp. Restore any version in one click |
+| **AI-Generated Titles** | Resume titles are auto-generated from your content. Edit anytime |
+| **Persistent State** | Job data, resume, chat history, and progress all survive page refreshes |
+| **Code Search** | Find and replace across your LaTeX source. Match case, regex, and whole-word filters built in |
+| **Keyboard Shortcuts** | `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat |
+| **Route-Based Navigation** | Each step has its own URL. Refresh or share a link and land right where you left off |
+| **PDF & Text Export** | Download resumes and cover letters as PDF or plain text |
 
-- **Intelligent Job Analysis** — Paste any job posting. AI extracts the skills, qualifications, and keywords that matter.
-- **LaTeX Resume Editor + Resulyze AI** — Write in LaTeX with live PDF preview. Chat with the AI assistant to optimize your resume against the job description in real time.
-- **Cover Letters & Referrals** — Generate role-specific cover letters and referral messages. Export as PDF or plain text. Send directly via email.
-- **Interview Preparation** — Practice with AI-generated questions drawn from the actual job requirements, complete with model answers and company research.
+---
 
-### Built to keep your flow
-
-- **Route-based navigation** — Each step lives at its own URL. Refresh the page or share a link — you'll land right where you left off.
-- **Resume versioning** — Every AI optimization and chat edit is auto-saved with a timestamp. Restore any previous version in one click.
-- **AI-generated resume titles** — Titles are auto-generated from your resume content. Edit anytime.
-- **Persistent state** — Job analysis, resume, chat history, and step progress all survive page refreshes via localStorage.
-- **Canvas PDF preview** — High-fidelity PDF rendering powered by pdf.js with zoom controls, retina support, and responsive resizing.
-- **Keyboard shortcuts** — `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat, plus standard editor bindings.
-- **Smart landing page** — Returning users see a "Continue editing your resume" shortcut to jump straight back in.
-
-## Bring Your Own Key (BYOK)
-
-Resulyze runs entirely in your browser with **your own Gemini API key**.
-
-- No sign-up required
-- No usage tracking
-- Your key never leaves your browser
-
-> Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey).
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 14 (App Router) |
-| Language | TypeScript 5 |
-| UI | React 18, Radix UI, Tailwind CSS |
-| Editor | CodeMirror 6 (LaTeX) |
-| PDF | pdf.js (CDN), jsPDF |
-| AI | Google Gemini API |
-| Rich Text | Tiptap |
-| Export | jsPDF, docx |
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-
-### Setup
+## Quick Start
 
 ```bash
 git clone https://github.com/vanshaj-pahwa/resulyze.git
@@ -74,21 +59,36 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — no `.env` file needed for basic use. Just enter your Gemini API key in the browser.
+Open [localhost:3000](http://localhost:3000). Enter your Gemini API key in the browser. That's it.
 
-> **Optional:** To set a server-side fallback key, create `.env.local` with `GEMINI_API_KEY=your_key`.
+> Get a free key at [Google AI Studio](https://aistudio.google.com/apikey)
 
-## How It Works
+---
 
-1. **Paste the job description** — Skills, requirements, and keywords are extracted automatically.
-2. **Refine your resume** — AI suggestions align every bullet point to the specific role. Version history tracks every change.
-3. **Generate cover letters** — Tailored letters and referral messages, exportable as PDF or plain text.
-4. **Prepare with confidence** — Practice interviews with AI-generated questions based on the actual job posting.
+## Tech Stack
+
+| | |
+|---|---|
+| **Framework** | Next.js 14 (App Router) |
+| **Language** | TypeScript 5 |
+| **UI** | React 18, Radix UI, Tailwind CSS |
+| **Editor** | CodeMirror 6 (LaTeX) |
+| **PDF** | pdf.js, jsPDF |
+| **AI** | Google Gemini API |
+| **Rich Text** | Tiptap |
+
+---
+
+## BYOK (Bring Your Own Key)
+
+Your Gemini API key stays in your browser. It's sent directly to Google's API from the client. Resulyze never stores, logs, or proxies your key.
+
+---
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-[MIT](LICENSE) © Vanshaj Pahwa
+[MIT](LICENSE) &copy; Vanshaj Pahwa
