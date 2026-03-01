@@ -42,10 +42,11 @@ function loadPdfjs(): Promise<any> {
   })
 }
 
-async function renderPageToCanvas(
+async function renderPage(
   pdfDoc: any,
   pageNum: number,
   canvas: HTMLCanvasElement,
+  annotationDiv: HTMLDivElement,
   containerWidth: number,
   scale: number
 ) {
@@ -55,6 +56,7 @@ async function renderPageToCanvas(
   const renderScale = targetWidth / unscaledViewport.width
   const viewport = page.getViewport({ scale: renderScale })
 
+  // Render canvas
   const dpr = window.devicePixelRatio || 1
   canvas.width = viewport.width * dpr
   canvas.height = viewport.height * dpr
@@ -66,6 +68,35 @@ async function renderPageToCanvas(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
   await page.render({ canvasContext: ctx, viewport }).promise
+
+  // Render clickable link annotations
+  annotationDiv.innerHTML = ''
+  annotationDiv.style.width = `${viewport.width}px`
+  annotationDiv.style.height = `${viewport.height}px`
+
+  try {
+    const annotations = await page.getAnnotations()
+    for (const annotation of annotations) {
+      if (annotation.subtype !== 'Link') continue
+      const url = annotation.url || (annotation.unsafeUrl)
+      if (!url) continue
+
+      const rect = viewport.convertToViewportRectangle(annotation.rect)
+      const left = Math.min(rect[0], rect[2])
+      const top = Math.min(rect[1], rect[3])
+      const width = Math.abs(rect[2] - rect[0])
+      const height = Math.abs(rect[3] - rect[1])
+
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      link.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;pointer-events:auto;cursor:pointer;`
+      annotationDiv.appendChild(link)
+    }
+  } catch {
+    // Annotation rendering is non-critical
+  }
 }
 
 export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload }: PreviewPanelProps) {
@@ -129,11 +160,14 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
       const width = container!.clientWidth
       if (width === 0) { rendering = false; return }
 
-      const canvases = container!.querySelectorAll('canvas')
-      for (let i = 0; i < canvases.length; i++) {
+      const wrappers = container!.querySelectorAll('[data-page-wrapper]')
+      for (let i = 0; i < wrappers.length; i++) {
         if (cancelled) { rendering = false; return }
+        const canvas = wrappers[i].querySelector('canvas') as HTMLCanvasElement
+        const annotationLayer = wrappers[i].querySelector('[data-annotation-layer]') as HTMLDivElement
+        if (!canvas || !annotationLayer) continue
         try {
-          await renderPageToCanvas(doc, i + 1, canvases[i] as HTMLCanvasElement, width, scale)
+          await renderPage(doc, i + 1, canvas, annotationLayer, width, scale)
         } catch (err) {
           console.error(`Failed to render page ${i + 1}:`, err)
         }
@@ -254,10 +288,15 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
 
             <div ref={canvasContainerRef} className="flex flex-col gap-4 py-4 px-4">
               {Array.from({ length: numPages }, (_, i) => (
-                <canvas
-                  key={`page-${i + 1}`}
-                  className="shadow-[0_2px_12px_rgba(0,0,0,0.12)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] rounded mx-auto bg-white"
-                />
+                <div key={`page-${i + 1}`} data-page-wrapper className="relative mx-auto">
+                  <canvas
+                    className="shadow-[0_2px_12px_rgba(0,0,0,0.12)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] rounded bg-white"
+                  />
+                  <div
+                    data-annotation-layer
+                    className="absolute top-0 left-0 pointer-events-none [&>a]:pointer-events-auto"
+                  />
+                </div>
               ))}
               {numPages > 0 && (
                 <p className="text-xs text-zinc-400 pb-2">
