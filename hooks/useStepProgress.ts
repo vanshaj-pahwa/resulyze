@@ -37,5 +37,14 @@ export function useStepProgress() {
     setCompletedSteps(new Set())
   }, [])
 
-  return { completedSteps, markComplete, reset, mounted }
+  const resetStep = useCallback((stepId: string) => {
+    setCompletedSteps(prev => {
+      const next = new Set(prev)
+      next.delete(stepId)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)))
+      return next
+    })
+  }, [])
+
+  return { completedSteps, markComplete, reset, resetStep, mounted }
 }

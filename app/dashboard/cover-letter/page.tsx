@@ -15,7 +15,7 @@ export default function CoverLetterPage() {
   return (
     <Card>
       <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
-        <CardTitle className="!text-xl">Step 3: Cover Letter & Referrals</CardTitle>
+        <CardTitle className="!text-xl">Cover Letter & Referrals</CardTitle>
         <CardDescription>Generate personalized cover letters and referral messages</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">

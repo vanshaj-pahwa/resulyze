@@ -11,6 +11,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import 'highlight.js/styles/github-dark.css' // Import a code highlighting theme
+import InlineJobForm from '@/components/shared/InlineJobForm'
 
 interface InterviewPrepProps {
   readonly jobData: any
@@ -47,16 +48,30 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
   const [roundSpecificQuestions, setRoundSpecificQuestions] = useState<{[key: string]: InterviewQuestion[]}>({})
   const [currentRound, setCurrentRound] = useState<string | null>(null)
   const [isGeneratingRoundQuestions, setIsGeneratingRoundQuestions] = useState(false)
+  const [localJobData, setLocalJobData] = useState<any>(null)
+
+  const effectiveJobData = jobData || localJobData
+
+  const handleInlineSubmit = (data: { company: string; jobTitle: string; jobDescription?: string }) => {
+    setLocalJobData({
+      company: data.company,
+      jobTitle: data.jobTitle,
+      jobDescription: data.jobDescription || '',
+      skills: [],
+      qualifications: [],
+      keywords: [],
+    })
+  }
 
   // Automatically fetch company research when component loads
   useEffect(() => {
-    if (jobData?.company) {
+    if (effectiveJobData?.company) {
       getCompanyResearch();
     }
-  }, [jobData?.company]);
+  }, [effectiveJobData?.company]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getCompanyResearch = async () => {
-    if (!jobData?.company) {
+    if (!effectiveJobData?.company) {
       alert('Please complete job analysis with company information first')
       return
     }
@@ -66,8 +81,8 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
       const response = await fetchWithKey('/api/research-company', {
         method: 'POST',
         body: JSON.stringify({
-          companyName: jobData.company,
-          jobTitle: jobData.jobTitle || ''
+          companyName: effectiveJobData.company,
+          jobTitle: effectiveJobData.jobTitle || ''
         })
       })
 
@@ -89,7 +104,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
   }
 
   const generateQuestionsForRound = async (roundName: string, description: string) => {
-    if (!jobData || !resumeData) {
+    if (!effectiveJobData || !resumeData) {
       alert('Please complete job analysis and resume first');
       return;
     }
@@ -101,7 +116,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
       const response = await fetchWithKey('/api/generate-interview-questions', {
         method: 'POST',
         body: JSON.stringify({
-          jobData,
+          jobData: effectiveJobData,
           resumeData,
           interviewRound: roundName,
           roundDetails: description
@@ -142,7 +157,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
   };
 
   const generateQuestions = async () => {
-    if (!jobData || !resumeData) {
+    if (!effectiveJobData || !resumeData) {
       alert('Please complete job analysis and resume first')
       return
     }
@@ -151,7 +166,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
     try {
       const response = await fetchWithKey('/api/generate-interview-questions', {
         method: 'POST',
-        body: JSON.stringify({ jobData, resumeData })
+        body: JSON.stringify({ jobData: effectiveJobData, resumeData })
       })
 
       if (!response.ok) {
@@ -250,7 +265,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
           category: question.category,
           tips: question.tips,
           resumeData,
-          jobData,
+          jobData: effectiveJobData,
           roundName // Pass the round name if available
         })
       });
@@ -336,6 +351,9 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
 
   return (
     <div className="space-y-6">
+      {!effectiveJobData && (
+        <InlineJobForm onSubmit={handleInlineSubmit} />
+      )}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Interview Preparation</h3>
@@ -346,17 +364,17 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
               {isResearchLoading ? (
                 <span className="flex items-center">
                   <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                  <span className="hidden xs:inline">Researching {jobData?.company || 'company'} interview process...</span>
+                  <span className="hidden xs:inline">Researching {effectiveJobData?.company || 'company'} interview process...</span>
                   <span className="xs:hidden">Researching...</span>
                 </span>
               ) : companyResearch ? (
                 <span>
-                  <span className="hidden sm:inline">Explore the interview process at {jobData?.company || 'the company'} and prepare for each stage</span>
+                  <span className="hidden sm:inline">Explore the interview process at {effectiveJobData?.company || 'the company'} and prepare for each stage</span>
                   <span className="sm:hidden">Interview process available</span>
                 </span>
               ) : (
                 <span>
-                  <span className="hidden xs:inline">Analyzing interview process at {jobData?.company || 'the company'}...</span>
+                  <span className="hidden xs:inline">Analyzing interview process at {effectiveJobData?.company || 'the company'}...</span>
                   <span className="xs:hidden">Analyzing interview process...</span>
                 </span>
               )}
@@ -366,7 +384,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
         <div className="w-full md:w-auto">
           <Button
             onClick={generateQuestions}
-            disabled={isGenerating || !jobData || !resumeData}
+            disabled={isGenerating || !effectiveJobData || !resumeData}
             className={`w-full md:w-auto ${isGenerating ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300' : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200'} shadow-md transition-all duration-200`}
           >
             {isGenerating ? (
@@ -405,7 +423,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                   </div>
                   <p className="font-medium text-zinc-700 dark:text-zinc-300">Research the company to prepare for your interview</p>
                   <p className="text-sm mt-2 max-w-md mx-auto text-zinc-500 dark:text-zinc-400">
-                    Get insights about {jobData?.company || 'the company'}, its culture, and what to expect during the interview process.
+                    Get insights about {effectiveJobData?.company || 'the company'}, its culture, and what to expect during the interview process.
                   </p>
                 </div>
               </CardContent>
@@ -414,7 +432,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
             <Card>
               <CardHeader className="bg-zinc-50 dark:bg-zinc-800">
                 <CardTitle className="text-lg font-medium">
-                  About {jobData?.company || 'the company'}
+                  About {effectiveJobData?.company || 'the company'}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
@@ -447,7 +465,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
                   </div>
                   <p className="font-medium text-zinc-700 dark:text-zinc-300">Research the company first to see interview stages</p>
                   <p className="text-sm mt-2 max-w-md mx-auto text-zinc-500 dark:text-zinc-400">
-                    Wait for the company research to complete to learn about {jobData?.company || 'the company'}'s interview process.
+                    Wait for the company research to complete to learn about {effectiveJobData?.company || 'the company'}'s interview process.
                   </p>
                 </div>
               </CardContent>

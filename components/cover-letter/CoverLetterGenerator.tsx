@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Loader2, Copy, Download, Mail, AlertCircle, FileDown } from 'lucide-react'
 import { fetchWithKey } from '@/lib/fetch'
 import { jsPDF } from 'jspdf'
+import InlineJobForm from '@/components/shared/InlineJobForm'
 
 interface CoverLetterGeneratorProps {
   readonly jobData: any
@@ -22,10 +23,24 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+  const [localJobData, setLocalJobData] = useState<any>(null)
+
+  const effectiveJobData = jobData || localJobData
+
+  const handleInlineSubmit = (data: { company: string; jobTitle: string; jobDescription?: string }) => {
+    setLocalJobData({
+      company: data.company,
+      jobTitle: data.jobTitle,
+      jobDescription: data.jobDescription || '',
+      skills: [],
+      qualifications: [],
+      keywords: [],
+    })
+  }
 
   const getMissingRequirements = () => {
     const missing = []
-    if (!jobData) missing.push('Job Description')
+    if (!effectiveJobData) missing.push('Job Description')
     if (!resumeData) missing.push('Resume')
     return missing
   }
@@ -37,7 +52,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
   }
 
   const generateCoverLetter = async () => {
-    if (!jobData || !resumeData) {
+    if (!effectiveJobData || !resumeData) {
       alert('Please complete job analysis and resume first')
       return
     }
@@ -46,7 +61,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
     try {
       const response = await fetchWithKey('/api/generate-cover-letter', {
         method: 'POST',
-        body: JSON.stringify({ jobData, resumeData })
+        body: JSON.stringify({ jobData: effectiveJobData, resumeData })
       })
 
       const data = await response.json()
@@ -59,7 +74,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
   }
 
   const generateReferralMessage = async () => {
-    if (!jobData || !resumeData) {
+    if (!effectiveJobData || !resumeData) {
       alert('Please complete job analysis and resume first')
       return
     }
@@ -69,7 +84,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
       const response = await fetchWithKey('/api/generate-referral-message', {
         method: 'POST',
         body: JSON.stringify({
-          jobData,
+          jobData: effectiveJobData,
           resumeData,
           contactName: contactName.trim(),
           contactEmail: contactEmail.trim()
@@ -128,7 +143,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
       return
     }
 
-    const subject = `Referral Request - ${jobData?.jobTitle || 'Job Opportunity'} at ${jobData?.company || 'Company'}`
+    const subject = `Referral Request - ${effectiveJobData?.jobTitle || 'Job Opportunity'} at ${effectiveJobData?.company || 'Company'}`
     const body = encodeURIComponent(referralMessage)
     const mailtoLink = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${body}`
 
@@ -152,11 +167,14 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(!jobData || !resumeData) && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                  <AlertCircle className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm text-amber-700">
-                    {getTooltipMessage()} to generate your cover letter
+              {!effectiveJobData && (
+                <InlineJobForm onSubmit={handleInlineSubmit} />
+              )}
+              {effectiveJobData && !resumeData && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm text-amber-700 dark:text-amber-300">
+                    Please complete your Resume to generate your cover letter
                   </span>
                 </div>
               )}
@@ -166,9 +184,9 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="w-full sm:w-auto">
-                        <Button 
-                          onClick={generateCoverLetter} 
-                          disabled={isGenerating || !jobData || !resumeData}
+                        <Button
+                          onClick={generateCoverLetter}
+                          disabled={isGenerating || !effectiveJobData || !resumeData}
                           className="w-full sm:w-auto"
                         >
                           {isGenerating ? (
@@ -186,7 +204,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                         </Button>
                       </div>
                     </TooltipTrigger>
-                    {(!jobData || !resumeData) && (
+                    {(!effectiveJobData || !resumeData) && (
                       <TooltipContent>
                         <p>{getTooltipMessage()}</p>
                       </TooltipContent>
@@ -255,11 +273,14 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                 </div>
               </div>
 
-              {(!jobData || !resumeData) && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                  <AlertCircle className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm text-amber-700">
-                    {getTooltipMessage()} to generate your referral message
+              {!effectiveJobData && (
+                <InlineJobForm onSubmit={handleInlineSubmit} />
+              )}
+              {effectiveJobData && !resumeData && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm text-amber-700 dark:text-amber-300">
+                    Please complete your Resume to generate your referral message
                   </span>
                 </div>
               )}
@@ -269,9 +290,9 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="xs:col-span-2 w-full sm:w-auto">
-                        <Button 
-                          onClick={generateReferralMessage} 
-                          disabled={isGenerating || !jobData || !resumeData}
+                        <Button
+                          onClick={generateReferralMessage}
+                          disabled={isGenerating || !effectiveJobData || !resumeData}
                           className="w-full sm:w-auto"
                         >
                           {isGenerating ? (
@@ -289,7 +310,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
                         </Button>
                       </div>
                     </TooltipTrigger>
-                    {(!jobData || !resumeData) && (
+                    {(!effectiveJobData || !resumeData) && (
                       <TooltipContent>
                         <p>{getTooltipMessage()}</p>
                       </TooltipContent>

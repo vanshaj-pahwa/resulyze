@@ -21,11 +21,11 @@
 
 ## What is Resulyze?
 
-Resulyze is an AI-powered career toolkit with four steps:
+Resulyze is an AI-powered career toolkit with four tools you can use in any order:
 
-- **Job Analysis** extracts skills, qualifications, and keywords from any job posting
+- **Job Analysis** extracts skills, qualifications, and keywords from any job posting. Recent analyses are saved so you can switch between roles
 - **Resume Editor** lets you write LaTeX with a live PDF preview and an AI chat that optimizes your resume for ATS and the specific job description
-- **Cover Letters & Referrals** generates role-specific letters exportable as PDF, plain text, or directly via email
+- **Cover Letters & Referrals** generates role-specific letters exportable as PDF, plain text, or directly via email. Works with or without a prior job analysis
 - **Interview Prep** creates practice questions from the actual job requirements with model answers and company research
 
 > **New to LaTeX?** No problem. Just paste your details and let the AI handle the formatting and LaTeX coding. You get a clean, ATS-friendly resume without writing a single LaTeX command.
@@ -42,6 +42,7 @@ Everything runs in your browser. Bring your own Gemini API key.
 | **Live PDF Preview** | High-fidelity canvas rendering with zoom, retina support, and responsive resizing |
 | **Resume Versioning** | Every AI edit is auto-saved with a timestamp. Restore any version in one click |
 | **AI-Generated Titles** | Resume titles are auto-generated from your content. Edit anytime |
+| **JD History** | Last 5 analyzed job descriptions are saved. Preview, delete, or switch between them in one click |
 | **Persistent State** | Job data, resume, chat history, and progress all survive page refreshes |
 | **Code Search** | Find and replace across your LaTeX source. Match case, regex, and whole-word filters built in |
 | **Keyboard Shortcuts** | `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat |

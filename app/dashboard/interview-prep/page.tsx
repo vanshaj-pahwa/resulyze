@@ -14,7 +14,7 @@ export default function InterviewPrepPage() {
   return (
     <Card>
       <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
-        <CardTitle className="!text-xl">Step 4: Interview Preparation</CardTitle>
+        <CardTitle className="!text-xl">Interview Preparation</CardTitle>
         <CardDescription>Get AI-generated interview questions based on the job and your resume</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">

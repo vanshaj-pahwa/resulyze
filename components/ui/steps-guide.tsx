@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { Button } from './button'
-import { Info, X, FileText, Code2, PenSquare, Zap, CheckCircle2, Lock } from 'lucide-react'
+import { Info, X, FileText, Code2, PenSquare, Zap, CheckCircle2 } from 'lucide-react'
 
 const steps = [
-  { num: 1, icon: FileText, title: 'Job Analysis', desc: 'Paste or upload a job description to extract key requirements and skills.' },
-  { num: 2, icon: Code2, title: 'Resume Editor', desc: 'Edit your LaTeX resume with AI optimization tailored to the role.' },
-  { num: 3, icon: PenSquare, title: 'Cover Letter', desc: 'Generate a personalized cover letter and referral message.' },
-  { num: 4, icon: Zap, title: 'Interview Prep', desc: 'Practice with AI-generated questions and company research.' },
+  { icon: FileText, title: 'Job Analysis', desc: 'Paste or upload a job description to extract key requirements and skills.' },
+  { icon: Code2, title: 'Resume Editor', desc: 'Edit your LaTeX resume with AI optimization tailored to the role.' },
+  { icon: PenSquare, title: 'Cover Letter', desc: 'Generate a personalized cover letter and referral message.' },
+  { icon: Zap, title: 'Interview Prep', desc: 'Practice with AI-generated questions and company research.' },
 ]
 
 export function StepsGuide() {
@@ -47,7 +47,7 @@ export function StepsGuide() {
             {/* Steps */}
             <div className="px-4 py-3 space-y-0">
               {steps.map((step, i) => (
-                <div key={step.num} className="flex gap-3 relative">
+                <div key={step.title} className="flex gap-3 relative">
                   {/* Vertical connector */}
                   {i < steps.length - 1 && (
                     <div className="absolute left-[13px] top-7 bottom-0 w-px bg-zinc-200 dark:bg-zinc-700" />
@@ -59,7 +59,6 @@ export function StepsGuide() {
                   {/* Content */}
                   <div className="pb-4 min-w-0">
                     <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-tight">
-                      <span className="text-zinc-400 dark:text-zinc-500 mr-1.5">{step.num}.</span>
                       {step.title}
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
@@ -71,19 +70,8 @@ export function StepsGuide() {
             </div>
 
             {/* Legend */}
-            <div className="px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Done</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 rounded-full border-2 border-zinc-900 dark:border-zinc-100" />
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Active</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600" />
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Locked</span>
-              </div>
+            <div className="px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">All tools are available from the start. Use them in any order.</p>
             </div>
           </div>
         </>

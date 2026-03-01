@@ -39,17 +39,17 @@ const features = [
 
 const steps = [
   {
-    num: 1,
-    title: 'Paste the job description',
+    icon: FileText,
+    title: 'Analyze the job posting',
     description: 'Skills, requirements, and keywords are extracted automatically.',
   },
   {
-    num: 2,
+    icon: Code2,
     title: 'Refine your resume',
     description: 'AI suggestions align every detail to the specific role.',
   },
   {
-    num: 3,
+    icon: PenSquare,
     title: 'Prepare with confidence',
     description: 'Cover letters, referral messages, and interview questions, ready in minutes.',
   },
@@ -190,7 +190,7 @@ export default function Home() {
             Four tools. One workflow.
           </h2>
           <p className="text-center text-zinc-500 dark:text-zinc-400 mb-12 max-w-lg mx-auto reveal">
-            Four focused tools that take you from job posting to interview-ready.
+            Use any tool in any order. Each one works on its own or together.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {features.map((feature) => (
@@ -215,13 +215,13 @@ export default function Home() {
       <section className="py-20 border-t border-zinc-100 dark:border-zinc-800/50">
         <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-center text-zinc-900 dark:text-zinc-100 mb-12">
-            Three steps. That&apos;s it.
+            How it works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {steps.map((step) => (
-              <div key={step.num} className="text-center">
-                <div className="w-10 h-10 rounded-full border-2 border-zinc-200 dark:border-zinc-700 flex items-center justify-center mx-auto mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {step.num}
+              <div key={step.title} className="text-center">
+                <div className="w-10 h-10 rounded-full border-2 border-zinc-200 dark:border-zinc-700 flex items-center justify-center mx-auto mb-4">
+                  <step.icon className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 </div>
                 <h3 className="font-heading font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                   {step.title}
