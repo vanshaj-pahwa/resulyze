@@ -420,7 +420,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       <Search className="w-3.5 h-3.5 shrink-0" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Search (Ctrl+F)</TooltipContent>
+                  <TooltipContent>Find & Replace</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 

@@ -6,7 +6,7 @@ import { EditorState } from '@codemirror/state'
 import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands'
 import { bracketMatching, foldGutter, indentOnInput, StreamLanguage } from '@codemirror/language'
 import { stex } from '@codemirror/legacy-modes/mode/stex'
-import { search, searchKeymap, highlightSelectionMatches, openSearchPanel } from '@codemirror/search'
+import { search, searchKeymap, highlightSelectionMatches, openSearchPanel, closeSearchPanel } from '@codemirror/search'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 
@@ -78,12 +78,24 @@ const prismDarkTheme = EditorView.theme({
     borderBottom: '1px solid #2a2a2a',
   },
   '& .cm-search': {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '6px',
     padding: '8px 12px',
     fontSize: '13px',
   },
+  '& .cm-search br': {
+    flexBasis: '100%',
+    height: '0',
+  },
   '& .cm-search label': {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
     color: '#999',
     fontSize: '12px',
+    whiteSpace: 'nowrap',
   },
   '& .cm-textfield': {
     backgroundColor: '#252525 !important',
@@ -93,6 +105,7 @@ const prismDarkTheme = EditorView.theme({
     padding: '4px 8px !important',
     fontSize: '13px !important',
     outline: 'none',
+    width: '200px',
   },
   '& .cm-textfield:focus': {
     borderColor: '#515c6a !important',
@@ -106,6 +119,7 @@ const prismDarkTheme = EditorView.theme({
     padding: '3px 10px !important',
     fontSize: '12px !important',
     backgroundImage: 'none !important',
+    whiteSpace: 'nowrap',
   },
   '& .cm-button:hover': {
     backgroundColor: '#3a3a3a !important',
@@ -121,6 +135,8 @@ const prismDarkTheme = EditorView.theme({
     cursor: 'pointer',
     verticalAlign: 'middle',
     position: 'relative',
+    margin: '0',
+    flexShrink: '0',
   },
   '& .cm-search input[type=checkbox]:checked': {
     backgroundColor: '#515c6a',
@@ -143,13 +159,11 @@ const prismDarkTheme = EditorView.theme({
     padding: '0 6px',
     border: 'none !important',
     backgroundColor: 'transparent !important',
+    marginLeft: 'auto',
   },
   '& .cm-search button[name=close]:hover': {
     color: '#e0e0e0',
     backgroundColor: 'transparent !important',
-  },
-  '& .cm-search br': {
-    display: 'none',
   },
 })
 
@@ -261,10 +275,16 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger }:
     }
   }, [value])
 
-  // Open search panel when searchTrigger changes
+  // Toggle search panel when searchTrigger changes
   useEffect(() => {
     if (searchTrigger && viewRef.current) {
-      openSearchPanel(viewRef.current)
+      const view = viewRef.current
+      const searchOpen = view.dom.querySelector('.cm-search')
+      if (searchOpen) {
+        closeSearchPanel(view)
+      } else {
+        openSearchPanel(view)
+      }
     }
   }, [searchTrigger])
 
