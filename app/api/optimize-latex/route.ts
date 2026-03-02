@@ -1,29 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGeminiClient } from '@/lib/gemini'
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, initialDelay = 1000) => {
-  let lastError
-  let retries = 0
-
-  while (retries < maxRetries) {
-    try {
-      const result = await model.generateContent(prompt)
-      return result.response.text().trim()
-    } catch (error: any) {
-      lastError = error
-      if ((error.status >= 500 && error.status < 600) || error.status === 429) {
-        await delay(initialDelay * Math.pow(2, retries))
-        retries++
-      } else {
-        throw error
-      }
-    }
-  }
-
-  throw lastError
-}
+import { getCondensedResumeKnowledge } from '@/lib/ai/resume-knowledge'
+import { generateWithRetry } from '@/lib/ai/generate'
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,17 +18,21 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel(
       {
         model: 'gemini-3-flash-preview',
-        generationConfig: {
-          temperature: 0.4,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 8192,
-        },
+      generationConfig: {
+        temperature: 0.4,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 8192,
+      },
       },
       { apiVersion: 'v1beta' }
     )
 
-    const prompt = `You are an expert resume writer AND a LaTeX expert. You are given a LaTeX resume and a parsed job description. Your task is to optimize the resume to better match the job description and maximize ATS score.
+    const prompt = `You are an expert resume writer AND a LaTeX expert. You follow these resume writing rules:
+
+${getCondensedResumeKnowledge()}
+
+You are given a LaTeX resume and a parsed job description. Your task is to optimize the resume to better match the job description while following the rules above.
 
 Job Description Analysis:
 - Job Title: ${jobData.jobTitle || 'Not specified'}
@@ -65,12 +47,13 @@ Current LaTeX Resume:
 ${latexSource}
 
 Optimize the resume by:
-1. Rephrase the Profile/Summary section to naturally incorporate JD keywords and align with the target role
-2. Add missing skills from the JD to the Skills section where the candidate reasonably has them (infer from existing experience)
-3. Rephrase achievement bullet points (\\resumeItem{...}) to use terminology and keywords from the JD
-4. Reorder skills to prioritize those matching the JD
-5. Strengthen quantifiable metrics where they already exist
-6. Ensure the resume reads naturally — don't just stuff keywords
+1. Rephrase achievement bullets using the XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]"
+2. Replace weak action verbs (Helped, Assisted, Worked on, Used) with strong ones (Built, Reduced, Architected, Implemented)
+3. Add missing JD skills to the Skills section where the candidate reasonably has them (infer from experience)
+4. Reorder skills to prioritize JD matches
+5. Strengthen quantifiable metrics where they exist — push for specific numbers
+6. Flag and fix any formatting violations from the rules above (capitalization, date format, etc.)
+7. Ensure the resume reads naturally — don't keyword-stuff
 
 CRITICAL CONSTRAINTS:
 - NEVER fabricate experience, companies, job titles, dates, or certifications

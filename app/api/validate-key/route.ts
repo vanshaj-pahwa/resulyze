@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel(
+      { model: 'gemini-3-flash-preview' },
+      { apiVersion: 'v1beta' }
+    )
 
     await model.generateContent('Say "ok"')
 

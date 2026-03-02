@@ -10,13 +10,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No LaTeX source provided' }, { status: 400 })
     }
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 60,
+    const model = genAI.getGenerativeModel(
+      {
+        model: 'gemini-3-flash-preview',
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 60,
+        },
       },
-    })
+      { apiVersion: 'v1beta' }
+    )
 
     const prompt = `Given this LaTeX resume, extract the candidate's full name and primary role. Generate a concise resume title (max 5 words). Look for the name in \\name{}, \\author{}, or the first prominent text in the document header.
 

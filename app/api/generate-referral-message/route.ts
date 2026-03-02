@@ -6,9 +6,10 @@ export async function POST(request: NextRequest) {
     const genAI = getGeminiClient(request);
     const { jobData, resumeData, contactName } = await request.json();
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-    });
+    const model = genAI.getGenerativeModel(
+      { model: "gemini-3-flash-preview" },
+      { apiVersion: "v1beta" }
+    );
 
     const resumeContent = resumeData.latexSource || JSON.stringify(resumeData);
     const greeting = contactName ? "Hi " + contactName + "," : "Hi there,";

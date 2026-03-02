@@ -41,7 +41,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   }, [handleSend])
 
   return (
-    <div className="border-t border-zinc-700/50 bg-zinc-800/80 p-3">
+    <div className="border-t border-zinc-200 dark:border-zinc-700/50 bg-zinc-50 dark:bg-zinc-800/80 p-3">
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -51,17 +51,17 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           placeholder="Ask about LaTeX, request changes..."
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none bg-zinc-700/50 border border-zinc-600/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 resize-none bg-white dark:bg-zinc-700/50 border border-zinc-200 dark:border-zinc-600/50 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-100 text-zinc-900 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-900 text-zinc-100 hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <SendHorizonal className="w-4 h-4" />
         </button>
       </div>
-      <p className="text-[10px] text-zinc-600 mt-1.5 text-center">
+      <p className="text-[10px] text-zinc-400 dark:text-zinc-600 mt-1.5 text-center">
         Shift+Enter for new line
       </p>
     </div>

@@ -1,112 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGeminiClient } from '@/lib/gemini'
+import { generateWithRetry } from '@/lib/ai/generate'
 
-const DEFAULT_USER_ID = 'default-user'
-
-// Helper function to delay execution
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper function to attempt API call with retries
-const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, initialDelay = 1000) => {
-  let lastError;
-  let retries = 0;
-  
-  while (retries < maxRetries) {
-    try {
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
-    } catch (error: any) {
-      lastError = error;
-      
-      // If it's a model overload error (503), retry
-      if (error.message && error.message.includes("503") && error.message.includes("overloaded")) {
-        console.log(`Attempt ${retries + 1} failed, retrying in ${initialDelay * (retries + 1)}ms...`);
-        await delay(initialDelay * Math.pow(2, retries)); // Exponential backoff
-        retries++;
-      } else {
-        // If it's another error, throw immediately
-        throw error;
-      }
-    }
-  }
-  
-  // If we've exhausted our retries, throw the last error
-  throw lastError;
-};
-
-// Fallback questions when AI service is unavailable
+// Role-adaptive fallback questions when AI service is unavailable
 const generateFallbackQuestions = (jobData: any, resumeData: any) => {
-  const jobTitle = jobData?.jobTitle || 'the role';
-  const company = jobData?.company || 'the company';
-  
+  const jobTitle = jobData?.jobTitle || 'the role'
+  const company = jobData?.company || 'the company'
+  const skills = Array.isArray(jobData?.skills) ? jobData.skills : []
+  const topSkills = skills.slice(0, 3)
+
   return {
     questions: [
       {
         category: "Technical",
-        question: `Describe the difference between \`useState\` and \`useRef\` in React. Provide a specific use case for each.`,
+        question: `Walk me through how you would design a system or solution using **${topSkills[0] || 'the core technologies listed in the job description'}** for a project relevant to ${jobTitle}. What architecture decisions would you make and why?`,
         tips: [
-          "Clearly articulate the re-rendering behavior associated with `useState` and the lack thereof with `useRef`",
-          "Provide practical examples beyond the standard 'input focus' example for `useRef` (e.g., storing previous prop values, managing timers)",
-          "Explain how these hooks fit into React's component lifecycle"
+          "Describe the system at a high level before diving into implementation details",
+          "Explain your technology choices and the trade-offs you considered",
+          "Mention scalability, maintainability, and testing strategies"
         ]
       },
       {
         category: "Technical",
-        question: `Explain the benefits of using TypeScript over JavaScript in a large React project. How would you approach migrating an existing JavaScript codebase to TypeScript?`,
+        question: `Describe a challenging technical problem you solved in a previous role that is relevant to **${jobTitle}**. What was the problem, how did you approach it, and what was the outcome?`,
         tips: [
-          "Highlight improved code maintainability, reduced runtime errors, and enhanced developer tooling",
-          "Outline a gradual migration strategy, focusing on annotating key components and utility functions first",
-          "Mention the use of `any` type strategically during the initial migration phase"
+          "Use the STAR method: Situation, Task, Action, Result",
+          "Include specific metrics or outcomes where possible (e.g., performance improvements, users impacted)",
+          "Highlight the technical skills most relevant to the target role"
+        ]
+      },
+      {
+        category: "Behavioral",
+        question: `Tell me about a time you disagreed with a teammate or manager on a technical approach. How did you handle it and what was the result?`,
+        tips: [
+          "Show that you can advocate for your position respectfully with data and reasoning",
+          "Demonstrate willingness to compromise when presented with better arguments",
+          "Focus on the outcome and what you learned from the experience"
         ]
       },
       {
         category: "Problem Solving",
-        question: `Imagine you are building a complex form in React with multiple interdependent fields. The form data needs to be persisted to a backend API. Describe how you would manage the form state and handle API interactions, considering potential error scenarios and performance optimizations.`,
+        question: `You are given a tight deadline to deliver a feature for **${jobTitle}** at **${company}**. The requirements are ambiguous and the codebase is unfamiliar. Walk me through your approach.`,
         tips: [
-          "Demonstrate your understanding of state management techniques, including controlled components, form libraries, and asynchronous data handling",
-          "Address error handling strategies (e.g., displaying validation errors, retrying failed requests)",
-          "Discuss performance optimization techniques like debouncing or throttling input changes"
+          "Start by clarifying requirements — describe the right questions to ask stakeholders",
+          "Explain how you would ramp up on an unfamiliar codebase quickly",
+          "Discuss how you would communicate progress and risks to the team"
         ]
       },
       {
         category: "Experience",
-        question: `Describe a challenging bug you encountered while working with React and how you approached debugging and resolving it. What tools and techniques did you use?`,
+        question: `What is the most impactful project you have worked on, and how does that experience prepare you for **${jobTitle}** at **${company}**?`,
         tips: [
-          "Focus on a specific bug and provide a clear and concise explanation of the problem, the debugging process, and the solution",
-          "Highlight your problem-solving skills, debugging tools (e.g., React DevTools, console.log, network analysis)",
-          "Share lessons learned and how you'd prevent similar issues in the future"
+          "Pick a project that demonstrates skills directly relevant to the target role",
+          "Quantify impact: users served, performance improvements, revenue affected, time saved",
+          "Connect specific skills and lessons learned to the job requirements"
         ]
       },
       {
         category: "Technical",
-        question: `Explain the differences between various CSS-in-JS solutions (e.g., Styled Components, Emotion, Material UI's \`sx\` prop). When would you choose one over the others?`,
+        question: topSkills.length >= 2
+          ? `Compare and contrast **${topSkills[0]}** and **${topSkills[1]}**. When would you choose one over the other, and what trade-offs would you consider?`
+          : `What are the most important technical trends in your field right now, and how do you stay current with evolving technologies?`,
         tips: [
-          "Demonstrate your understanding of the trade-offs between different CSS-in-JS approaches (e.g., bundle size, performance, ease of use)",
-          "Relate your choice to specific project requirements, such as the need for server-side rendering, theming capabilities, or existing component libraries",
-          "Discuss how these solutions compare to traditional CSS/SCSS approach in terms of maintainability"
+          "Demonstrate depth of understanding beyond surface-level knowledge",
+          "Provide concrete examples from your own experience using these technologies",
+          "Discuss trade-offs rather than declaring one technology universally better"
         ]
       },
       {
-        category: "Technical",
-        question: `Describe your experience with testing React components. What types of tests have you written, and what are the benefits and drawbacks of each type?`,
+        category: "Company",
+        question: `Why are you interested in **${company}**, and what specifically about the **${jobTitle}** role excites you?`,
         tips: [
-          "Demonstrate a solid understanding of different testing strategies (unit, integration, end-to-end) and their purpose",
-          "Provide specific examples of how you would test a React component using React Testing Library",
-          "Discuss how testing fits into your development workflow and CI/CD pipeline"
-        ]
-      },
-      {
-        category: "Experience",
-        question: `Describe a project where you used a specific state management library (Redux, MobX, Context API). What were the benefits and drawbacks of your choice?`,
-        tips: [
-          "Be honest about the challenges you faced and the lessons you learned",
-          "Demonstrate your ability to evaluate different technologies based on project requirements",
-          "Discuss how your choice affected team productivity, application performance, and codebase maintainability"
+          "Reference specific aspects of the company's product, mission, or technical challenges",
+          "Connect your career goals to the opportunities this role provides",
+          "Show genuine enthusiasm with specifics — avoid generic statements"
         ]
       }
     ]
-  };
-};
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,15 +96,18 @@ export async function POST(request: NextRequest) {
       const actualRoundName = interviewRound || roundName;
       const isRoundSpecific = !!actualRoundName || !!roundDetails;
       
-      const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 3072,
-      }
-    });
+      const model = genAI.getGenerativeModel(
+      {
+        model: 'gemini-3-flash-preview',
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 3072,
+        },
+      },
+      { apiVersion: 'v1beta' }
+    )
 
     // Safely get values with fallbacks
     const jobTitle = jobData?.jobTitle || 'the position';

@@ -1,125 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGeminiClient } from '@/lib/gemini'
-
-const DEFAULT_USER_ID = 'default-user'
-
-// Helper function to delay execution
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper function to attempt API call with retries
-const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, initialDelay = 1000) => {
-  let lastError;
-  let retries = 0;
-  
-  while (retries < maxRetries) {
-    try {
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
-    } catch (error: any) {
-      lastError = error;
-      
-      // If it's a model overload error (503), retry
-      if (error.message && error.message.includes("503") && error.message.includes("overloaded")) {
-        console.log(`Attempt ${retries + 1} failed, retrying in ${initialDelay * (retries + 1)}ms...`);
-        await delay(initialDelay * Math.pow(2, retries)); // Exponential backoff
-        retries++;
-      } else {
-        // If it's another error, throw immediately
-        throw error;
-      }
-    }
-  }
-  
-  // If we've exhausted our retries, throw the last error
-  throw lastError;
-};
+import { generateWithRetry } from '@/lib/ai/generate'
 
 // Fallback company research when AI service is unavailable
-const generateFallbackResearch = (companyName: string) => {
+const generateFallbackResearch = (companyName: string, jobTitle: string) => {
   return {
-    companyOverview: `${companyName} is a company operating in its industry. To learn more about their specific details, visit their official website or check their LinkedIn page.`,
+    companyOverview: `Unable to research ${companyName} at this time. Visit their official website or LinkedIn page for company details.`,
+    confidenceLevel: 'low' as const,
     interviewProcess: [
       {
         roundName: "Technical Screening",
         description: "Initial technical assessment to evaluate your skills related to the position.",
         focus: "Problem-solving abilities and technical knowledge",
+        isVerified: false,
+        source: "typical for industry",
         tips: [
-          "Review the job description carefully",
-          "Practice coding problems if applying for a technical role",
-          "Be prepared to discuss your past projects"
+          "Review the job description carefully and match your experience to each requirement",
+          `Practice problems relevant to ${jobTitle || 'the role'}`,
+          "Be prepared to discuss your past projects with specific metrics and outcomes"
         ]
       },
       {
         roundName: "Behavioral Interview",
         description: "Assessment of your soft skills and cultural fit with the company.",
         focus: "Communication skills, teamwork, and past experiences",
+        isVerified: false,
+        source: "typical for industry",
         tips: [
-          "Use the STAR method (Situation, Task, Action, Result)",
-          "Prepare examples from your past experience",
-          "Research the company culture"
+          "Use the STAR method (Situation, Task, Action, Result) for every answer",
+          "Prepare 5-6 stories that demonstrate leadership, conflict resolution, and impact",
+          "Research the company culture and values before the interview"
         ]
       },
       {
         roundName: "Final Interview",
-        description: "Discussion with hiring manager or team lead about the role.",
+        description: "Discussion with hiring manager or team lead about the role and team fit.",
         focus: "Role-specific questions and alignment with team needs",
+        isVerified: false,
+        source: "typical for industry",
         tips: [
-          "Prepare questions about the team and project",
-          "Demonstrate your interest in the company",
-          "Clarify any aspects of the role you're unsure about"
+          "Prepare thoughtful questions about the team structure and current projects",
+          "Demonstrate genuine interest in the company's mission and challenges",
+          "Clarify expectations for the first 30/60/90 days in the role"
         ]
       }
     ]
-  };
-};
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const genAI = getGeminiClient(request)
-    const { companyName, jobTitle } = await request.json();
-    
+    const { companyName, jobTitle, jobDescription } = await request.json()
+
     if (!companyName) {
       return NextResponse.json(
         { error: 'Company name is required' },
         { status: 400 }
-      );
+      )
     }
 
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.5,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 2048,
-      }
-    });
-    
+    const model = genAI.getGenerativeModel(
+      {
+        model: 'gemini-3-flash-preview',
+        generationConfig: {
+          temperature: 0.5,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 2048,
+        },
+      },
+      { apiVersion: 'v1beta' }
+    )
+
     const prompt = `
-    Research the company "${companyName}" and provide information about their interview process for a "${jobTitle || 'professional'}" role.
-    
-    Please return your response in the following JSON format:
-    
+You are helping a candidate prepare for interviews at "${companyName}" for a "${jobTitle || 'professional'}" role.
+
+${jobDescription ? `Here is the actual job description:\n${jobDescription}\n` : ''}
+
+CRITICAL RULES:
+1. You do NOT have real-time access to ${companyName}'s actual interview process.
+2. DO NOT present any specific claims about their interview process as verified fact.
+3. If you know the company well (e.g., Google, Amazon, Meta, Microsoft), you may mention COMMONLY KNOWN aspects of their process, clearly labeled as "commonly reported."
+4. For less-known companies, be explicit: "Specific interview process details for ${companyName} are not available."
+5. ${jobDescription ? 'USE the job description above to infer likely interview focus areas. If the JD mentions "technical assessment," "panel interview," "take-home," etc., include those as likely rounds.' : 'Without a job description, provide only general guidance based on industry norms.'}
+
+Return a JSON object:
+{
+  "companyOverview": "Brief factual description of the company. If uncertain about details, say so honestly.",
+  "confidenceLevel": "high" | "medium" | "low",
+  "interviewProcess": [
     {
-      "companyOverview": "Brief overview of the company, their industry, mission, and culture",
-      "interviewProcess": [
-        {
-          "roundName": "Name of the interview round (e.g., 'Technical Screening')",
-          "description": "Description of what happens in this round",
-          "focus": "What the company evaluates in this round",
-          "tips": [
-            "Preparation tip 1",
-            "Preparation tip 2",
-            "Preparation tip 3"
-          ]
-        }
-      ]
+      "roundName": "Name of likely round",
+      "description": "What this round typically involves",
+      "focus": "Skills and qualities evaluated",
+      "isVerified": false,
+      "source": "inferred from JD" | "commonly reported" | "typical for industry",
+      "tips": ["tip1", "tip2", "tip3"]
     }
-    
-    Include 3-5 interview rounds based on typical processes for this company. If specific information isn't available for ${companyName}, provide a general interview process for similar companies in their industry for the role of ${jobTitle || 'this type of position'}.
-    
-    Return ONLY valid JSON without any markdown formatting, comments, or additional text.
-    `;
+  ]
+}
+
+Include 3-5 interview rounds. ${jobDescription ? 'Derive rounds primarily from the job description — look for phrases about assessments, interviews, or evaluation stages.' : 'Provide rounds typical for a company of this type hiring for this role.'}
+
+Return ONLY valid JSON without any markdown formatting, comments, or additional text.
+`
     
     try {
       // Try to generate research with retries
@@ -134,7 +119,7 @@ export async function POST(request: NextRequest) {
         console.error('Raw response:', jsonResponse);
         
         // If parsing fails, use the fallback
-        const fallbackResponse = generateFallbackResearch(companyName);
+        const fallbackResponse = generateFallbackResearch(companyName, jobTitle)
         return NextResponse.json(fallbackResponse);
       }
     } catch (generationError) {
@@ -142,7 +127,7 @@ export async function POST(request: NextRequest) {
       
       // If generation fails after retries, use fallback
       console.log('Using fallback company research');
-      const fallbackResponse = generateFallbackResearch(companyName);
+      const fallbackResponse = generateFallbackResearch(companyName, jobTitle)
       return NextResponse.json(fallbackResponse);
     }
   } catch (error: unknown) {

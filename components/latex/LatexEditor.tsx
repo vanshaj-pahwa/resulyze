@@ -3,12 +3,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
-import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search } from 'lucide-react'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
 import { useChatLatex } from '@/hooks/useChatLatex'
 import { useResumeVersions } from '@/hooks/useResumeVersions'
+import { useResumeReview } from '@/hooks/useResumeReview'
 import { ShortcutsDialog } from '@/components/ui/shortcuts-dialog'
 
 const CodePanel = dynamic(() => import('./CodePanel'), { ssr: false })
@@ -17,6 +18,8 @@ const SkillMatchPanel = dynamic(() => import('./SkillMatchPanel'), { ssr: false 
 const ChatPanel = dynamic(() => import('./ChatPanel'), { ssr: false })
 const ChatFloatingBar = dynamic(() => import('./ChatFloatingBar'), { ssr: false })
 const VersionHistory = dynamic(() => import('./VersionHistory'), { ssr: false })
+const ResumeReviewPanel = dynamic(() => import('./ResumeReviewPanel'), { ssr: false })
+const OverflowBanner = dynamic(() => import('./OverflowBanner'), { ssr: false })
 
 interface LatexEditorProps {
   readonly jobData: any
@@ -27,19 +30,8 @@ const STORAGE_KEY = 'resulyze-latex-source'
 const TITLE_STORAGE_KEY = 'resulyze-resume-title'
 
 export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditorProps) {
-  const [latexSource, setLatexSource] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) return saved
-    }
-    return DEFAULT_LATEX_SOURCE
-  })
-  const [resumeTitle, setResumeTitle] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(TITLE_STORAGE_KEY) || ''
-    }
-    return ''
-  })
+  const [latexSource, setLatexSource] = useState<string>(DEFAULT_LATEX_SOURCE)
+  const [resumeTitle, setResumeTitle] = useState<string>('')
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [isCompiling, setIsCompiling] = useState(false)
   const [compilationError, setCompilationError] = useState<string | null>(null)
@@ -50,7 +42,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
   const [showLatexHint, setShowLatexHint] = useState(false)
   const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const userEditedTitle = useRef(!!resumeTitle)
+  const userEditedTitle = useRef(false)
 
   // Optimization state
   const [isOptimizing, setIsOptimizing] = useState(false)
@@ -59,11 +51,20 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const [previousLatex, setPreviousLatex] = useState<string | null>(null)
 
   // Auto-compile flag — when true, triggers compilation on next render
-  const [pendingCompile, setPendingCompile] = useState(true) // true = compile on initial load
+  const [pendingCompile, setPendingCompile] = useState(false)
 
   // Version history
   const { versions, saveVersion, deleteVersion, updateLabel } = useResumeVersions()
   const [showHistory, setShowHistory] = useState(false)
+
+  // Review state
+  const resumeReview = useResumeReview()
+  const [showReview, setShowReview] = useState(false)
+
+  // Page overflow state
+  const [pdfPageCount, setPdfPageCount] = useState(0)
+  const [overflowDismissed, setOverflowDismissed] = useState(false)
+  const [isTrimming, setIsTrimming] = useState(false)
 
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -78,6 +79,18 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       toast.success('Changes applied from AI assistant')
     }, [latexSource, resumeTitle, saveVersion]),
   })
+
+  // Load persisted state client-side after hydration (avoids SSR/client mismatch)
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) setLatexSource(saved)
+    const savedTitle = localStorage.getItem(TITLE_STORAGE_KEY)
+    if (savedTitle) {
+      setResumeTitle(savedTitle)
+      userEditedTitle.current = true
+    }
+    setPendingCompile(true)
+  }, [])
 
   // Auto-save to localStorage (only when user has modified from default)
   useEffect(() => {
@@ -301,6 +314,45 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     setTimeout(() => chat.sendMessage(message), 50)
   }, [chat])
 
+  // Page count callback from PreviewPanel
+  const handlePageCount = useCallback((count: number) => {
+    setPdfPageCount(count)
+    if (count <= 1) setOverflowDismissed(false) // reset dismiss when back to 1 page
+  }, [])
+
+  // Auto-trim handler
+  const handleTrim = useCallback(async () => {
+    if (isTrimming) return
+    setIsTrimming(true)
+
+    try {
+      const response = await fetchWithKey('/api/trim-resume', {
+        method: 'POST',
+        body: JSON.stringify({ latexSource, jobData, pageCount: pdfPageCount }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || data.error) {
+        toast.error(data.error || 'Failed to trim resume')
+        return
+      }
+
+      if (data.trimmedLatex) {
+        saveVersion(latexSource, resumeTitle, 'Pre-trim')
+        setPreviousLatex(latexSource)
+        setLatexSource(data.trimmedLatex)
+        setPendingCompile(true)
+        setOverflowDismissed(true)
+        toast.success('Resume trimmed! Review the changes.')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to trim resume')
+    } finally {
+      setIsTrimming(false)
+    }
+  }, [latexSource, jobData, pdfPageCount, isTrimming, saveVersion, resumeTitle])
+
   return (
     <div className="flex flex-col gap-3">
       {/* New to LaTeX hint */}
@@ -324,15 +376,19 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
           </button>
         </div>
       )}
-      <div className={`flex flex-col ${showLatexHint ? 'h-[calc(100vh-195px)]' : 'h-[calc(100vh-150px)]'} min-h-[500px] rounded-lg overflow-hidden border border-latex-border shadow-lg transition-all duration-200`}>
+      <div className={`flex flex-col ${showLatexHint ? 'h-[calc(100vh-195px)]' : 'h-[calc(100vh-150px)]'} min-h-[500px] rounded-lg overflow-hidden border border-zinc-200 dark:border-latex-border shadow-sm dark:shadow-lg transition-all duration-200`}>
+
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left: Code Editor */}
-        <div className={`${isChatOpen ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-latex-editor min-w-0 relative transition-all duration-200`}>
-          {/* Tab bar */}
-          <div className="h-10 bg-latex-toolbar flex items-center justify-between px-2 border-b border-latex-border shrink-0 overflow-hidden">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <FileText className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-              <div className="relative min-w-0">
+        <div className={`${isChatOpen || showReview ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full bg-white dark:bg-latex-editor min-w-0 transition-all duration-200`}>
+          {/* Inner wrapper — flex flex-col h-full, mirrors PreviewPanel pattern so h-full in children resolves correctly */}
+          <div className="flex flex-col h-full">
+
+          {/* Toolbar — above code editor only */}
+          <div className="h-10 bg-zinc-100 dark:bg-latex-toolbar flex items-center justify-between px-2 border-b border-zinc-200 dark:border-latex-border shrink-0">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <FileText className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+              <div className="relative flex-1 min-w-0">
                 <input
                   type="text"
                   value={resumeTitle}
@@ -346,14 +402,27 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                     setResumeTitle(e.target.value)
                   }}
                   placeholder={isGeneratingTitle ? '' : 'Untitled Resume'}
-                  className={`text-xs text-white font-mono bg-transparent border-none outline-none placeholder:text-zinc-500 min-w-0 ${isChatOpen ? 'w-28 sm:w-36' : 'w-40 sm:w-56'} ${isGeneratingTitle ? 'caret-transparent' : ''}`}
+                  className={`text-xs text-zinc-800 dark:text-white font-mono bg-transparent border-none outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 w-full ${isGeneratingTitle ? 'caret-transparent' : ''}`}
                 />
                 {isGeneratingTitle && !resumeTitle && (
-                  <span className="absolute inset-0 flex items-center text-xs font-mono text-zinc-500 animate-pulse pointer-events-none">
-                    Generating title...
+                  <span className="absolute inset-0 flex items-center text-xs font-mono text-zinc-400 dark:text-zinc-500 animate-pulse pointer-events-none">
+                    Generating...
                   </span>
                 )}
               </div>
+              {resumeTitle && !isGeneratingTitle && (
+                <button
+                  onClick={() => {
+                    userEditedTitle.current = true
+                    setResumeTitle('')
+                    localStorage.removeItem(TITLE_STORAGE_KEY)
+                  }}
+                  className="p-0.5 text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 rounded transition-colors shrink-0"
+                  title="Clear title"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {/* Optimize for JD button */}
@@ -365,8 +434,8 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       disabled={!jobData || isOptimizing}
                       className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap
                         ${jobData
-                          ? 'text-zinc-200 hover:text-white hover:bg-white/10 border border-zinc-600'
-                          : 'text-zinc-600 cursor-not-allowed border border-zinc-700'
+                          ? 'text-zinc-600 hover:text-zinc-900 hover:bg-black/5 border border-zinc-300 dark:text-zinc-200 dark:hover:text-white dark:hover:bg-white/10 dark:border-zinc-600'
+                          : 'text-zinc-400 cursor-not-allowed border border-zinc-200 dark:text-zinc-600 dark:border-zinc-700'
                         }
                         ${isOptimizing ? 'opacity-60 cursor-wait' : ''}
                       `}
@@ -376,7 +445,9 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       ) : (
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
                       )}
-                      {!isChatOpen && <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize for JD'}</span>}
+                      {!(isChatOpen || showReview) && (
+                        <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize for JD'}</span>
+                      )}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -396,16 +467,53 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       onClick={() => setShowHistory(prev => !prev)}
                       className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border
                         ${showHistory
-                          ? 'text-white bg-white/10 border-zinc-500'
-                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/10 border-zinc-700'
+                          ? 'text-zinc-800 bg-zinc-200 border-zinc-300 dark:text-white dark:bg-white/10 dark:border-zinc-500'
+                          : 'text-zinc-500 hover:text-zinc-800 hover:bg-black/5 border-zinc-200 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/10 dark:border-zinc-700'
                         }
                       `}
                     >
                       <Clock className="w-3.5 h-3.5 shrink-0" />
-                      {!isChatOpen && <span className="hidden sm:inline">History</span>}
+                      {!(isChatOpen || showReview) && <span className="hidden sm:inline">History</span>}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Version history</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Review button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => {
+                        if (showReview) {
+                          setShowReview(false)
+                          resumeReview.clearReview()
+                        } else {
+                          setShowReview(true)
+                          resumeReview.requestReview(latexSource, jobData)
+                        }
+                      }}
+                      disabled={resumeReview.isReviewing}
+                      className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border
+                        ${showReview
+                          ? 'text-zinc-800 bg-zinc-200 border-zinc-300 dark:text-white dark:bg-white/10 dark:border-zinc-500'
+                          : 'text-zinc-500 hover:text-zinc-800 hover:bg-black/5 border-zinc-200 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/10 dark:border-zinc-700'
+                        }
+                        ${resumeReview.isReviewing ? 'opacity-60 cursor-wait' : ''}
+                      `}
+                    >
+                      {resumeReview.isReviewing ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      ) : (
+                        <FileSearch className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                      {!(isChatOpen || showReview) && (
+                        <span className="hidden sm:inline">{resumeReview.isReviewing ? 'Reviewing...' : 'Review'}</span>
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>AI resume review with scoring</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
@@ -415,7 +523,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => setSearchTrigger(t => t + 1)}
-                      className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border text-zinc-400 hover:text-zinc-200 hover:bg-white/10 border-zinc-700"
+                      className="flex items-center gap-1 px-1.5 py-1 text-xs rounded transition-colors font-medium whitespace-nowrap border text-zinc-500 hover:text-zinc-800 hover:bg-black/5 border-zinc-200 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/10 dark:border-zinc-700"
                     >
                       <Search className="w-3.5 h-3.5 shrink-0" />
                     </button>
@@ -425,17 +533,17 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               </TooltipProvider>
 
               {/* Shortcuts */}
-              <ShortcutsDialog compact={isChatOpen} />
+              <ShortcutsDialog compact={isChatOpen || showReview} />
             </div>
           </div>
 
           {/* Changes panel */}
           {showChangesPanel && optimizationChanges.length > 0 && (
-            <div className="bg-zinc-800/60 border-b border-zinc-700/50 px-3 py-2 shrink-0 max-h-36 overflow-y-auto">
+            <div className="bg-zinc-100 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700/50 px-3 py-2 shrink-0 max-h-36 overflow-y-auto">
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-zinc-300" />
-                  <span className="text-xs font-medium text-zinc-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                     {optimizationChanges.length} changes applied
                   </span>
                 </div>
@@ -443,7 +551,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                   {previousLatex && (
                     <button
                       onClick={handleUndoOptimization}
-                      className="flex items-center gap-1 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-700/50 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-0.5 text-xs text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-700/50 rounded transition-colors"
                     >
                       <Undo2 className="w-3 h-3" />
                       Undo
@@ -451,7 +559,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                   )}
                   <button
                     onClick={() => setShowChangesPanel(false)}
-                    className="p-0.5 text-zinc-500 hover:text-zinc-300 rounded transition-colors"
+                    className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 rounded transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -459,8 +567,8 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               </div>
               <ul className="space-y-0.5">
                 {optimizationChanges.map((change, i) => (
-                  <li key={i} className="text-xs text-zinc-400 flex items-start gap-1.5">
-                    <span className="text-zinc-500 mt-0.5 shrink-0">•</span>
+                  <li key={i} className="text-xs text-zinc-600 dark:text-zinc-400 flex items-start gap-1.5">
+                    <span className="text-zinc-400 dark:text-zinc-500 mt-0.5 shrink-0">•</span>
                     {change}
                   </li>
                 ))}
@@ -484,41 +592,72 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
           )}
 
           {/* Floating "Ask anything" bar */}
-          {!isChatOpen && (
+          {!isChatOpen && !showReview && (
             <ChatFloatingBar
               onSend={handleFloatingSend}
               onExpand={() => setIsChatOpen(true)}
               disabled={chat.isLoading}
             />
           )}
+          </div>{/* end inner flex flex-col h-full wrapper */}
         </div>
 
-        {/* Chat Panel (middle column) */}
-        {isChatOpen && (
+        {/* Chat Panel or Review Panel (middle column) */}
+        {(isChatOpen || showReview) && (
           <>
-            <div className="hidden lg:block w-px bg-latex-border shrink-0" />
-            <div className="lg:hidden h-px bg-latex-border shrink-0" />
+            <div className="hidden lg:block w-px bg-zinc-200 dark:bg-latex-border shrink-0" />
+            <div className="lg:hidden h-px bg-zinc-200 dark:bg-latex-border shrink-0" />
             <div className="lg:w-[28%] h-1/3 lg:h-full flex flex-col min-w-0">
-              <ChatPanel
-                onClose={() => setIsChatOpen(false)}
-                messages={chat.messages}
-                isLoading={chat.isLoading}
-                onSendMessage={chat.sendMessage}
-                onApplyProposal={chat.applyProposal}
-                onDismissProposal={chat.dismissProposal}
-                onUndoChanges={handleUndoOptimization}
-                onClearChat={chat.clearChat}
-              />
+              {showReview ? (
+                <ResumeReviewPanel
+                  review={resumeReview.review}
+                  isReviewing={resumeReview.isReviewing}
+                  error={resumeReview.error}
+                  onReviewAgain={() => resumeReview.requestReview(latexSource, jobData)}
+                  onSendToChat={(msg) => {
+                    setShowReview(false)
+                    setIsChatOpen(true)
+                    setTimeout(() => chat.sendMessage(msg), 50)
+                  }}
+                  onClose={() => {
+                    setShowReview(false)
+                    resumeReview.clearReview()
+                  }}
+                />
+              ) : (
+                <ChatPanel
+                  onClose={() => setIsChatOpen(false)}
+                  messages={chat.messages}
+                  isLoading={chat.isLoading}
+                  onSendMessage={chat.sendMessage}
+                  onApplyProposal={chat.applyProposal}
+                  onDismissProposal={chat.dismissProposal}
+                  onApplyChange={chat.applyChange}
+                  onDismissChange={chat.dismissChange}
+                  onUndoChanges={handleUndoOptimization}
+                  onClearChat={chat.clearChat}
+                  onStartBuilder={chat.startBuilder}
+                />
+              )}
             </div>
           </>
         )}
 
         {/* Divider */}
-        <div className="hidden lg:block w-px bg-latex-border shrink-0" />
-        <div className="lg:hidden h-px bg-latex-border shrink-0" />
+        <div className="hidden lg:block w-px bg-zinc-200 dark:bg-latex-border shrink-0" />
+        <div className="lg:hidden h-px bg-zinc-200 dark:bg-latex-border shrink-0" />
 
         {/* Right: PDF Preview or Version History */}
-        <div className={`${isChatOpen ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200 relative`}>
+        <div className={`${isChatOpen || showReview ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200 relative`}>
+          {/* Overflow banner */}
+          {pdfPageCount > 1 && !overflowDismissed && !showHistory && (
+            <OverflowBanner
+              pageCount={pdfPageCount}
+              isTrimming={isTrimming}
+              onTrim={handleTrim}
+              onDismiss={() => setOverflowDismissed(true)}
+            />
+          )}
           {showHistory ? (
             <VersionHistory
               versions={versions}
@@ -534,6 +673,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               error={compilationError}
               onCompile={handleCompile}
               onDownload={handleDownload}
+              onPageCount={handlePageCount}
             />
           )}
         </div>

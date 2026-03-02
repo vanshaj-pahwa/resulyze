@@ -11,6 +11,7 @@ interface PreviewPanelProps {
   error: string | null
   onCompile: () => void
   onDownload: () => void
+  onPageCount?: (count: number) => void
 }
 
 // Load pdf.js from CDN once
@@ -99,7 +100,7 @@ async function renderPage(
   }
 }
 
-export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload }: PreviewPanelProps) {
+export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload, onPageCount }: PreviewPanelProps) {
   const [scale, setScale] = useState(1)
   const [numPages, setNumPages] = useState(0)
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -132,6 +133,7 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
         if (!doc || renderIdRef.current !== currentRenderId) return
         pdfDocRef.current = doc
         setNumPages(doc.numPages)
+        onPageCount?.(doc.numPages)
         setPdfLoading(false)
       })
       .catch((err: any) => {

@@ -1,34 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGeminiClient } from '@/lib/gemini'
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, initialDelay = 1000) => {
-  let lastError
-  let retries = 0
-
-  while (retries < maxRetries) {
-    try {
-      const result = await model.generateContent(prompt)
-      return result.response.text().trim()
-    } catch (error: any) {
-      lastError = error
-      if ((error.status >= 500 && error.status < 600) || error.status === 429) {
-        await delay(initialDelay * Math.pow(2, retries))
-        retries++
-      } else {
-        throw error
-      }
-    }
-  }
-
-  throw lastError
-}
+import { getFullResumeKnowledge } from '@/lib/ai/resume-knowledge'
+import { generateWithRetry } from '@/lib/ai/generate'
+import { getBuilderSystemPrompt, type BuilderPhase } from '@/lib/ai/builder-flow'
 
 export async function POST(request: NextRequest) {
   try {
     const genAI = getGeminiClient(request)
-    const { messages, latexSource, jobData } = await request.json()
+    const { messages, latexSource, jobData, builderMode } = await request.json()
 
     if (!latexSource?.trim()) {
       return NextResponse.json({ error: 'LaTeX source is required' }, { status: 400 })
@@ -39,14 +18,15 @@ export async function POST(request: NextRequest) {
 
     const model = genAI.getGenerativeModel(
       {
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3-flash-preview',
         generationConfig: {
           temperature: 0.5,
           topP: 0.9,
           topK: 40,
           maxOutputTokens: 8192,
         },
-      }
+      },
+      { apiVersion: 'v1beta' }
     )
 
     const jobContext = jobData
@@ -68,13 +48,30 @@ export async function POST(request: NextRequest) {
       })
       .join('\n\n')
 
+    // Builder mode: inject guided builder system prompt
+    const builderContext = builderMode
+      ? [
+          '',
+          getBuilderSystemPrompt(
+            (messages.length <= 2 ? 'career-stage' : 'experience') as BuilderPhase,
+            {}
+          ),
+          '',
+        ].join('\n')
+      : ''
+
     const prompt = [
-      'You are an expert LaTeX assistant specialized in professional resumes. You help users edit, format, and improve their LaTeX resume documents.',
+      'You are an expert resume writer AND LaTeX specialist. You deeply understand what makes a resume effective — not just how to format LaTeX. You follow these resume writing rules as your absolute source of truth for resume quality:',
+      '',
+      getFullResumeKnowledge(),
+      builderContext,
       '',
       'CAPABILITIES:',
       '1. Answer LaTeX questions (syntax, packages, formatting, fonts, best practices)',
-      '2. Suggest improvements to resume content, structure, or formatting',
+      '2. Suggest improvements to resume content using the resume rules above',
       '3. Propose direct changes to the LaTeX code when the user asks for modifications',
+      '4. Proactively flag resume quality issues: weak action verbs, missing metrics, vague claims, formatting violations',
+      '5. Enforce the XYZ bullet format ("Accomplished [X] as measured by [Y], by doing [Z]") when rewriting experience bullets',
       '',
       'CURRENT LATEX SOURCE:',
       latexSource,
@@ -94,6 +91,23 @@ export async function POST(request: NextRequest) {
       '---LATEX---',
       'Full modified LaTeX source here (ONLY if proposing a change)',
       '---END---',
+      '',
+      'INTENT DETECTION — Recognize these patterns and respond appropriately:',
+      '- "too long" / "shorten" / "trim" / "one page" → Rank bullets by impact, suggest specific removals. Cut weakest bullets first, compress verbose phrasing second.',
+      '- "keywords" / "missing skills" / "match JD" → Cross-reference the JD skills against the resume. List missing skills, suggest where to insert each one.',
+      '- "review" / "feedback" / "how is my resume" → Score against the resume rules. Be specific — cite exact bullets, sections, formatting issues.',
+      '- "rewrite" / "improve" / "stronger" → Apply XYZ formula to bullets. Push for metrics. Replace weak verbs with strong action verbs.',
+      '- "add metrics" / "quantify" → Find bullets without numbers and suggest specific metrics (percentages, dollar amounts, user counts, time saved).',
+      '- "fix verbs" / "action verbs" → Scan all bullets, flag weak starts (Responsible for, Helped, Worked on), suggest replacements.',
+      '',
+      'STRUCTURE-AWARE REFERENCES:',
+      '- When referring to specific parts of the resume, use human-readable references like "your 2nd bullet under [Company Name]", "the Skills section", "your Education entry for [University]".',
+      '- NEVER use line numbers like "line 47" — the user cannot see line numbers in the preview.',
+      '',
+      'LATEX LINK AWARENESS:',
+      '- \\href{url}{display text} means only "display text" appears in the PDF. The URL inside \\href{} is NOT visible to the reader.',
+      '- Do NOT flag href URLs as "displaying https://" — they are masked hyperlinks.',
+      '- Phone numbers, LinkedIn, email, GitHub, and portfolio links are standard contact info. Do NOT suggest removing them.',
       '',
       'RULES:',
       '- The ---MESSAGE--- section is ALWAYS required.',
