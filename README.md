@@ -23,12 +23,12 @@
 
 Resulyze is an AI-powered career toolkit with four tools you can use in any order:
 
-- **Job Analysis** extracts skills, qualifications, and keywords from any job posting. Recent analyses are saved so you can switch between roles
-- **Resume Editor** lets you write LaTeX with a live PDF preview and an AI chat that optimizes your resume for ATS and the specific job description
-- **Cover Letters & Referrals** generates role-specific letters exportable as PDF, plain text, or directly via email. Works with or without a prior job analysis
-- **Interview Prep** creates practice questions from the actual job requirements with model answers and company research
+- **Job Analysis** extracts skills, qualifications, and keywords from any job posting. Normalizes 50+ skill aliases and saves your last 5 analyzed JDs for quick switching between roles
+- **Resume Editor** gives you a LaTeX editor with live PDF preview and an AI chat assistant that rewrites, optimizes, and scores your resume against the specific job description
+- **Cover Letters and Referrals** generates role-specific letters exportable as PDF or plain text. Company-aware tone calibration, achievement cherry-picking from your resume
+- **Interview Prep** creates practice questions from the actual job requirements with model answers and company research drawn from the JD context
 
-> **New to LaTeX?** No problem. Just paste your details and let the AI handle the formatting and LaTeX coding. You get a clean, ATS-friendly resume without writing a single LaTeX command.
+> **New to LaTeX?** No problem. Just paste your details and let the AI handle the formatting. You get a clean, ATS-friendly resume without writing a single LaTeX command.
 
 Everything runs in your browser. Bring your own Gemini API key.
 
@@ -38,16 +38,21 @@ Everything runs in your browser. Bring your own Gemini API key.
 
 | Feature | What it does |
 |---------|-------------|
-| **AI Chat Assistant** | Chat with AI to rewrite, optimize, and tailor your resume for ATS and recruiters |
-| **Live PDF Preview** | High-fidelity canvas rendering with zoom, retina support, and responsive resizing |
+| **Resume Review** | Scores your resume 0-100 with a letter grade. Section-by-section breakdown of ATS compliance, content quality, and skill match against the job description |
+| **Weak Bullet Detection** | Flags vague or unquantified bullets and suggests specific AI rewrites with metrics and strong action verbs |
+| **Skill Match Panel** | Shows your match percentage against the analyzed job description with color-coded matched and missing skills |
+| **AI Chat Assistant** | Chat to rewrite, optimize, and tailor your resume. Intent-aware: understands "too long", "add keywords", "fix verbs", and more |
+| **Quick Action Chips** | One-click prompts for common tasks: Review, Add metrics, Make concise, Fix verbs, Match JD |
+| **Live PDF Preview** | High-fidelity canvas rendering with zoom, retina support, clickable link annotations, and responsive resizing |
 | **Resume Versioning** | Every AI edit is auto-saved with a timestamp. Restore any version in one click |
-| **AI-Generated Titles** | Resume titles are auto-generated from your content. Edit anytime |
-| **JD History** | Last 5 analyzed job descriptions are saved. Preview, delete, or switch between them in one click |
-| **Persistent State** | Job data, resume, chat history, and progress all survive page refreshes |
-| **Code Search** | Find and replace across your LaTeX source. Match case, regex, and whole-word filters built in |
+| **Page Overflow Detection** | Detects when your resume exceeds one page and suggests AI-powered trims to fit |
+| **Editor Intelligence** | LaTeX autocomplete, real-time linting with inline diagnostics, document outline panel, and diff gutter showing changed lines |
+| **JD History** | Last 5 analyzed job descriptions are saved. Preview, delete, or switch between them |
+| **Code Search** | Find and replace across your LaTeX source with case, regex, and whole-word filter support |
 | **Keyboard Shortcuts** | `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat |
-| **Route-Based Navigation** | Each step has its own URL. Refresh or share a link and land right where you left off |
-| **PDF & Text Export** | Download resumes and cover letters as PDF or plain text |
+| **Persistent State** | Resume, job data, chat history, and preferences all survive page refreshes via localStorage |
+| **PDF and Text Export** | Download resumes and cover letters as PDF or plain text |
+| **Mobile Responsive** | Full access on mobile: editor, review panel, and chat open as a bottom sheet overlay |
 
 ---
 
@@ -73,16 +78,16 @@ Open [localhost:3000](http://localhost:3000). Enter your Gemini API key in the b
 | **Framework** | Next.js 14 (App Router) |
 | **Language** | TypeScript 5 |
 | **UI** | React 18, Radix UI, Tailwind CSS |
-| **Editor** | CodeMirror 6 (LaTeX) |
+| **Editor** | CodeMirror 6 (LaTeX syntax, autocomplete, linting) |
 | **PDF** | pdf.js, jsPDF |
-| **AI** | Google Gemini API |
+| **AI** | Google Gemini API (gemini-2.0-flash) |
 | **Rich Text** | Tiptap |
 
 ---
 
 ## BYOK (Bring Your Own Key)
 
-Your Gemini API key stays in your browser. It's sent directly to Google's API from the client. Resulyze never stores, logs, or proxies your key.
+Your Gemini API key stays in your browser. It is sent directly to Google's API from the client. Resulyze never stores, logs, or proxies your key. Your resume, job descriptions, and chat history are stored exclusively in localStorage and never leave your device.
 
 ---
 
