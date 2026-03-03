@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { RefreshCw, Download, Loader2, AlertCircle, ZoomIn, ZoomOut } from 'lucide-react'
+import { RotateCw, Download, Loader2, AlertCircle, ZoomIn, ZoomOut } from 'lucide-react'
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174'
 
@@ -208,37 +208,56 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="h-11 bg-zinc-50 dark:bg-zinc-800 flex items-center justify-between px-4 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onCompile}
-            disabled={isCompiling}
-            className="flex items-center gap-2 px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
-          >
-            {isCompiling ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden sm:inline">Compile</span>
-          </button>
-        </div>
+      <div className="h-10 bg-zinc-50 dark:bg-latex-toolbar flex items-center justify-between px-2.5 border-b border-zinc-200 dark:border-latex-border shrink-0">
+        {/* Compile — primary action, stays filled for visual hierarchy */}
+        <button
+          onClick={onCompile}
+          disabled={isCompiling}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-150 bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          {isCompiling ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+          ) : (
+            <RotateCw className="w-3.5 h-3.5 shrink-0" />
+          )}
+          <span>{isCompiling ? 'Compiling…' : 'Compile'}</span>
+        </button>
 
+        {/* Zoom controls + download */}
         {pdfUrl && !pdfError && (
-          <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <button onClick={zoomOut} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors" title="Zoom out">
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={zoomOut}
+              className="flex items-center justify-center px-1.5 py-1 rounded-md text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08] transition-all duration-150"
+              title="Zoom out"
+            >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <button onClick={resetZoom} className="px-1.5 py-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors text-[11px] font-mono min-w-[3rem] text-center" title="Reset zoom">
+            <button
+              onClick={resetZoom}
+              className="px-2 py-1 rounded-md text-[11px] font-medium tabular-nums text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08] transition-all duration-150 min-w-[2.75rem] text-center"
+              title="Reset zoom"
+            >
               {Math.round(scale * 100)}%
             </button>
-            <button onClick={zoomIn} className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors" title="Zoom in">
+            <button
+              onClick={zoomIn}
+              className="flex items-center justify-center px-1.5 py-1 rounded-md text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08] transition-all duration-150"
+              title="Zoom in"
+            >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
-            <span className="text-zinc-300 dark:text-zinc-600 mx-0.5">|</span>
-            <button onClick={onDownload} className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors text-zinc-600 dark:text-zinc-400">
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">PDF</span>
+
+            {/* Separator */}
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 mx-0.5 shrink-0" />
+
+            {/* Download */}
+            <button
+              onClick={onDownload}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08] transition-all duration-150 whitespace-nowrap"
+            >
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>PDF</span>
             </button>
           </div>
         )}
@@ -311,7 +330,7 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-3">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-zinc-300/60 dark:bg-zinc-700/60 flex items-center justify-center">
-                <RefreshCw className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
+                <RotateCw className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
               </div>
               <div>
                 <p className="text-zinc-600 dark:text-zinc-300 font-medium text-[15px]">No PDF preview yet</p>

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import {
   X, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2,
-  Loader2, MessageSquare, RefreshCw, Target, FileSearch,
+  Loader2, MessageSquare, RotateCw, Target, FileSearch,
+  ArrowRight,
   type LucideIcon
 } from 'lucide-react'
 import type { ResumeReview, SectionReview, WeakBullet } from '@/hooks/useResumeReview'
@@ -18,19 +19,28 @@ interface ResumeReviewPanelProps {
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 90) return 'text-emerald-500'
-  if (score >= 80) return 'text-zinc-600 dark:text-zinc-300'
-  if (score >= 70) return 'text-yellow-500'
-  if (score >= 60) return 'text-orange-500'
-  return 'text-red-500'
+  if (score >= 90) return 'text-emerald-700 dark:text-emerald-300'
+  if (score >= 80) return 'text-zinc-700 dark:text-zinc-200'
+  if (score >= 70) return 'text-amber-700 dark:text-amber-300'
+  if (score >= 60) return 'text-orange-700 dark:text-orange-300'
+  return 'text-red-700 dark:text-red-300'
 }
 
 function getScoreBg(score: number): string {
-  if (score >= 90) return 'bg-emerald-500/10 border-emerald-500/20'
-  if (score >= 80) return 'bg-zinc-500/10 border-zinc-500/20'
-  if (score >= 70) return 'bg-yellow-500/10 border-yellow-500/20'
-  if (score >= 60) return 'bg-orange-500/10 border-orange-500/20'
-  return 'bg-red-500/10 border-red-500/20'
+  if (score >= 90) return 'bg-emerald-50 border-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30'
+  if (score >= 80) return 'bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700'
+  if (score >= 70) return 'bg-amber-50 border-amber-300 dark:bg-amber-500/15 dark:border-amber-500/30'
+  if (score >= 60) return 'bg-orange-50 border-orange-300 dark:bg-orange-500/15 dark:border-orange-500/30'
+  return 'bg-red-50 border-red-300 dark:bg-red-500/15 dark:border-red-500/30'
+}
+
+// Section label component — consistent heading style
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+      {children}
+    </span>
+  )
 }
 
 function ScoreBadge({ score, grade, large }: { score: number; grade?: string; large?: boolean }) {
@@ -39,11 +49,11 @@ function ScoreBadge({ score, grade, large }: { score: number; grade?: string; la
 
   if (large) {
     return (
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${bg}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${bg}`}>
         <span className={`text-3xl font-bold tabular-nums ${color}`}>{score}</span>
         {grade && (
           <div className="flex flex-col">
-            <span className={`text-lg font-bold ${color}`}>{grade}</span>
+            <span className={`text-xl font-bold ${color}`}>{grade}</span>
             <span className="text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Grade</span>
           </div>
         )}
@@ -52,7 +62,7 @@ function ScoreBadge({ score, grade, large }: { score: number; grade?: string; la
   }
 
   return (
-    <span className={`text-xs font-bold tabular-nums ${color}`}>{score}</span>
+    <span className={`text-[11px] font-bold tabular-nums ${color}`}>{score}</span>
   )
 }
 
@@ -72,14 +82,14 @@ function SectionAccordion({
   const [open, setOpen] = useState(defaultOpen ?? section.score < 70)
 
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700/50 rounded-lg overflow-hidden">
+    <div className="border border-zinc-200 dark:border-zinc-700/60 rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Icon className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
-          <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{title}</span>
+          <Icon className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+          <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">{title}</span>
         </div>
         <div className="flex items-center gap-2">
           <ScoreBadge score={section.score} />
@@ -92,14 +102,14 @@ function SectionAccordion({
       </button>
 
       {open && (
-        <div className="px-3 pb-3 space-y-2 border-t border-zinc-200 dark:border-zinc-700/50">
+        <div className="px-3 pb-3 space-y-3 border-t border-zinc-100 dark:border-zinc-700/40">
           {section.findings.length > 0 && (
-            <div className="mt-2">
-              <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-medium">Findings</span>
-              <ul className="mt-1 space-y-1">
+            <div className="mt-2.5">
+              <SectionLabel>Findings</SectionLabel>
+              <ul className="mt-1.5 space-y-1.5">
                 {section.findings.map((f, i) => (
-                  <li key={i} className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-start gap-1.5">
-                    <span className="text-zinc-400 dark:text-zinc-600 mt-0.5 shrink-0">•</span>
+                  <li key={i} className="text-[12px] text-zinc-600 dark:text-zinc-300 flex items-start gap-2">
+                    <span className="text-zinc-300 dark:text-zinc-600 mt-0.5 shrink-0 select-none">—</span>
                     {f}
                   </li>
                 ))}
@@ -109,14 +119,14 @@ function SectionAccordion({
 
           {section.suggestions.length > 0 && (
             <div>
-              <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-medium">Suggestions</span>
-              <ul className="mt-1 space-y-1.5">
+              <SectionLabel>Suggestions</SectionLabel>
+              <ul className="mt-1.5 space-y-2">
                 {section.suggestions.map((s, i) => (
                   <li key={i} className="flex items-start gap-1.5 group">
-                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300 flex-1">{s}</span>
+                    <span className="text-[12px] text-zinc-700 dark:text-zinc-200 flex-1 leading-relaxed">{s}</span>
                     <button
                       onClick={() => onSendToChat(s)}
-                      className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-300 transition-all shrink-0"
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-600 dark:hover:text-zinc-300 dark:hover:bg-zinc-700/50 transition-all shrink-0"
                       title="Send to chat"
                     >
                       <MessageSquare className="w-3 h-3" />
@@ -134,26 +144,43 @@ function SectionAccordion({
 
 function WeakBulletCard({ bullet, onSendToChat }: { bullet: WeakBullet; onSendToChat: (msg: string) => void }) {
   return (
-    <div className="border border-zinc-200 dark:border-zinc-700/50 rounded-lg p-3 space-y-2">
-      <div>
-        <span className="text-[10px] uppercase tracking-wider text-red-400/70 font-medium">Original</span>
-        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 line-through decoration-red-500/30">{bullet.text}</p>
+    <div className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 overflow-hidden">
+      {/* Original */}
+      <div className="px-3 pt-3 pb-2.5 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/20">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-red-600 dark:text-red-300">
+          Original
+        </span>
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1 line-through decoration-red-500 leading-relaxed">
+          {bullet.text}
+        </p>
       </div>
-      <div>
-        <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-medium">Issue</span>
-        <p className="text-[11px] text-zinc-500 mt-0.5">{bullet.reason}</p>
+
+      {/* Issue */}
+      <div className="px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-700/60 bg-amber-50/50 dark:bg-amber-500/5">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
+          Issue
+        </span>
+        <p className="text-[12px] text-zinc-700 dark:text-zinc-300 mt-1 leading-relaxed">
+          {bullet.reason}
+        </p>
       </div>
-      <div>
-        <span className="text-[10px] uppercase tracking-wider text-emerald-400/70 font-medium">Suggested rewrite</span>
-        <p className="text-[11px] text-zinc-700 dark:text-zinc-300 mt-0.5">{bullet.rewrite}</p>
+
+      {/* Rewrite */}
+      <div className="px-3 pt-2.5 pb-3 bg-emerald-50 dark:bg-emerald-500/10">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+          Suggested Rewrite
+        </span>
+        <p className="text-[12px] text-zinc-800 dark:text-zinc-100 mt-1 leading-relaxed font-medium">
+          {bullet.rewrite}
+        </p>
+        <button
+          onClick={() => onSendToChat(`Rewrite this bullet: "${bullet.text}" to: "${bullet.rewrite}"`)}
+          className="mt-2 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-zinc-50 border border-zinc-200 dark:text-zinc-300 dark:hover:text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border-zinc-700 transition-colors"
+        >
+          <MessageSquare className="w-3 h-3" />
+          Apply in chat
+        </button>
       </div>
-      <button
-        onClick={() => onSendToChat(`Rewrite this bullet: "${bullet.text}" to: "${bullet.rewrite}"`)}
-        className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
-      >
-        <MessageSquare className="w-2.5 h-2.5" />
-        Send to chat
-      </button>
     </div>
   )
 }
@@ -177,30 +204,30 @@ export default function ResumeReviewPanel({
   onClose,
 }: ResumeReviewPanelProps) {
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900 border-x border-zinc-200 dark:border-zinc-700/50">
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
       {/* Header */}
-      <div className="h-10 bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-between px-3 border-b border-zinc-200 dark:border-zinc-700/50 shrink-0">
+      <div className="h-10 bg-zinc-50 dark:bg-latex-toolbar flex items-center justify-between px-2.5 border-b border-zinc-200 dark:border-latex-border shrink-0">
         <div className="flex items-center gap-2">
-          <FileSearch className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-400" />
-          <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Resume Review</span>
+          <FileSearch className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+          <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-200">Resume Review</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {review && (
             <button
               onClick={onReviewAgain}
               disabled={isReviewing}
-              className="p-1 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-700/50 rounded transition-colors"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08] transition-all duration-150 disabled:opacity-40"
               title="Review again"
             >
-              <RefreshCw className={`w-3 h-3 ${isReviewing ? 'animate-spin' : ''}`} />
+              <RotateCw className={`w-3 h-3 ${isReviewing ? 'animate-spin' : ''}`} />
+              <span>Rerun</span>
             </button>
           )}
           <button
             onClick={onClose}
-            className="p-1 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-700/50 rounded transition-colors"
-            title="Close"
+            className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-white/[0.08] transition-colors"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -208,20 +235,20 @@ export default function ResumeReviewPanel({
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar">
         {isReviewing && !review && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-3">
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <Loader2 className="w-6 h-6 text-zinc-400 dark:text-zinc-500 animate-spin mb-3" />
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Analyzing your resume...</p>
-            <p className="text-[10px] text-zinc-400 dark:text-zinc-600 mt-1">This may take a few seconds</p>
+            <p className="text-[12px] font-medium text-zinc-600 dark:text-zinc-300">Analyzing your resume…</p>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-600 mt-1">This may take a few seconds</p>
           </div>
         )}
 
         {error && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-3">
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <AlertTriangle className="w-6 h-6 text-red-400 mb-3" />
-            <p className="text-xs text-red-400">{error}</p>
+            <p className="text-[12px] text-red-500 dark:text-red-400 font-medium">{error}</p>
             <button
               onClick={onReviewAgain}
-              className="mt-3 px-3 py-1.5 text-xs text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:text-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded transition-colors"
+              className="mt-3 px-3 py-1.5 text-[11px] font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:text-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md transition-colors"
             >
               Try again
             </button>
@@ -233,26 +260,26 @@ export default function ResumeReviewPanel({
             {/* Score + Verdict */}
             <div className="flex items-start gap-3">
               <ScoreBadge score={review.overallScore} grade={review.letterGrade} large />
-              <div className="flex-1 min-w-0 pt-1">
-                <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">{review.verdict}</p>
+              <div className="flex-1 min-w-0 pt-1.5">
+                <p className="text-[12px] text-zinc-700 dark:text-zinc-200 leading-relaxed">{review.verdict}</p>
               </div>
             </div>
 
             {/* Top Priorities */}
             {review.topPriorities?.length > 0 && (
-              <div className="bg-zinc-100 dark:bg-zinc-800/60 rounded-lg p-3">
-                <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-medium">Top Priorities</span>
-                <ol className="mt-1.5 space-y-1">
+              <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700/50 p-3">
+                <SectionLabel>Top Priorities</SectionLabel>
+                <ol className="mt-2 space-y-2">
                   {review.topPriorities.map((priority, i) => (
-                    <li key={i} className="flex items-start gap-2 group">
-                      <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 shrink-0">{i + 1}.</span>
-                      <span className="text-[11px] text-zinc-700 dark:text-zinc-300 flex-1">{priority}</span>
+                    <li key={i} className="flex items-start gap-2.5 group">
+                      <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 shrink-0 mt-px">{i + 1}.</span>
+                      <span className="text-[12px] text-zinc-700 dark:text-zinc-200 flex-1 leading-relaxed">{priority}</span>
                       <button
                         onClick={() => onSendToChat(priority)}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-300 transition-all shrink-0"
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 dark:text-zinc-600 dark:hover:text-zinc-300 dark:hover:bg-zinc-700/50 transition-all shrink-0"
                         title="Send to chat"
                       >
-                        <MessageSquare className="w-3 h-3" />
+                        <ArrowRight className="w-3 h-3" />
                       </button>
                     </li>
                   ))}
@@ -268,7 +295,7 @@ export default function ResumeReviewPanel({
               onSendToChat={onSendToChat}
             />
 
-            {/* Relevance (if job data provided) */}
+            {/* Relevance */}
             {review.relevance && (
               <SectionAccordion
                 title="Job Relevance"
@@ -279,10 +306,10 @@ export default function ResumeReviewPanel({
               />
             )}
 
-            {/* Section Reviews */}
+            {/* Section Breakdown */}
             <div>
-              <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium">Section Breakdown</span>
-              <div className="mt-1.5 space-y-1.5">
+              <SectionLabel>Section Breakdown</SectionLabel>
+              <div className="mt-2 space-y-1.5">
                 {SECTION_CONFIG.map(({ key, label, icon }) => {
                   const section = review.sections[key]
                   if (!section) return null
@@ -302,8 +329,8 @@ export default function ResumeReviewPanel({
             {/* Weak Bullets */}
             {review.contentQuality?.weakBullets?.length > 0 && (
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium">Weak Bullets</span>
-                <div className="mt-1.5 space-y-2">
+                <SectionLabel>Weak Bullets</SectionLabel>
+                <div className="mt-2 space-y-2">
                   {review.contentQuality.weakBullets.map((bullet, i) => (
                     <WeakBulletCard key={i} bullet={bullet} onSendToChat={onSendToChat} />
                   ))}
@@ -314,11 +341,11 @@ export default function ResumeReviewPanel({
             {/* Missing Metrics */}
             {review.contentQuality?.missingMetrics?.length > 0 && (
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium">Missing Metrics</span>
-                <ul className="mt-1 space-y-1">
+                <SectionLabel>Missing Metrics</SectionLabel>
+                <ul className="mt-2 space-y-1.5">
                   {review.contentQuality.missingMetrics.map((m, i) => (
-                    <li key={i} className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-start gap-1.5">
-                      <AlertTriangle className="w-3 h-3 text-yellow-500/60 shrink-0 mt-0.5" />
+                    <li key={i} className="text-[12px] text-zinc-600 dark:text-zinc-300 flex items-start gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                       {m}
                     </li>
                   ))}
@@ -329,11 +356,11 @@ export default function ResumeReviewPanel({
             {/* Vague Claims */}
             {review.contentQuality?.vagueClaims?.length > 0 && (
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium">Vague Claims</span>
-                <ul className="mt-1 space-y-1">
+                <SectionLabel>Vague Claims</SectionLabel>
+                <ul className="mt-2 space-y-1.5">
                   {review.contentQuality.vagueClaims.map((c, i) => (
-                    <li key={i} className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-start gap-1.5">
-                      <span className="text-zinc-400 dark:text-zinc-600 mt-0.5 shrink-0">•</span>
+                    <li key={i} className="text-[12px] text-zinc-600 dark:text-zinc-300 flex items-start gap-2">
+                      <span className="text-zinc-300 dark:text-zinc-600 mt-0.5 shrink-0 select-none">—</span>
                       {c}
                     </li>
                   ))}

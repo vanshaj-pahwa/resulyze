@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection } from '@codemirror/view'
-import { EditorState, Compartment } from '@codemirror/state'
-import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, GutterMarker, gutter } from '@codemirror/view'
+import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder } from '@codemirror/state'
+import { defaultKeymap, indentWithTab, indentLess, history, historyKeymap, copyLineDown, moveLineUp, moveLineDown, deleteLine, toggleLineComment } from '@codemirror/commands'
 import { bracketMatching, foldGutter, indentOnInput, StreamLanguage } from '@codemirror/language'
+import { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap } from '@codemirror/autocomplete'
+import { latexCommandCompletions, latexEnvironmentCompletions, latexResumeSnippets } from '@/lib/latex/completions'
+import { linter, lintGutter } from '@codemirror/lint'
+import { latexLinter } from '@/lib/latex/linter'
 import { stex } from '@codemirror/legacy-modes/mode/stex'
 import { search, searchKeymap, highlightSelectionMatches, openSearchPanel, closeSearchPanel } from '@codemirror/search'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
@@ -362,6 +366,70 @@ const prismLightHighlightStyle = HighlightStyle.define([
   { tag: tags.heading, color: '#7c4dff', fontWeight: 'bold' },
 ])
 
+// ---------------------------------------------------------------------------
+// Diff gutter — highlights lines changed by AI (green bar, auto-clears)
+// ---------------------------------------------------------------------------
+const setChangedLines = StateEffect.define<Set<number>>()
+
+const changedLinesField = StateField.define<Set<number>>({
+  create: () => new Set(),
+  update(value, tr) {
+    // Clear markers when the user starts typing
+    if (tr.docChanged && (tr.isUserEvent('input') || tr.isUserEvent('delete'))) {
+      return new Set()
+    }
+    for (const effect of tr.effects) {
+      if (effect.is(setChangedLines)) return effect.value
+    }
+    return value
+  },
+})
+
+class DiffMarker extends GutterMarker {
+  constructor(private readonly color: string) { super() }
+  toDOM() {
+    const el = document.createElement('div')
+    el.style.cssText = `width:3px;height:100%;background:${this.color};border-radius:0 2px 2px 0;margin-left:1px`
+    return el
+  }
+}
+
+const addedMarker = new DiffMarker('#22c55e')   // green  — line added/changed
+const modifiedMarker = new DiffMarker('#f59e0b') // amber  — line modified in-place
+
+const diffGutterExtension = gutter({
+  class: 'cm-diff-gutter',
+  markers(view) {
+    const changedLines = view.state.field(changedLinesField)
+    if (changedLines.size === 0) return new RangeSetBuilder<GutterMarker>().finish()
+    return buildRangeSet(view, changedLines)
+  },
+  initialSpacer: () => new DiffMarker('transparent'),
+})
+
+function buildRangeSet(view: EditorView, changedLines: Set<number>) {
+  const builder = new RangeSetBuilder<GutterMarker>()
+  for (let i = 1; i <= view.state.doc.lines; i++) {
+    if (changedLines.has(i)) {
+      const line = view.state.doc.line(i)
+      builder.add(line.from, line.from, changedLines.has(-(i)) ? modifiedMarker : addedMarker)
+    }
+  }
+  return builder.finish()
+}
+
+/** Return the set of 1-based line numbers that differ between old and new text. */
+function diffLines(oldText: string, newText: string): Set<number> {
+  const oldLines = oldText.split('\n')
+  const newLines = newText.split('\n')
+  const changed = new Set<number>()
+  const len = Math.max(oldLines.length, newLines.length)
+  for (let i = 0; i < len; i++) {
+    if (oldLines[i] !== newLines[i]) changed.add(i + 1)
+  }
+  return changed
+}
+
 function isDark() {
   return document.documentElement.classList.contains('dark')
 }
@@ -371,14 +439,17 @@ interface CodePanelProps {
   onChange: (value: string) => void
   onCompile: () => void
   searchTrigger?: number
+  navigateToLine?: number
 }
 
-export default function CodePanel({ value, onChange, onCompile, searchTrigger }: CodePanelProps) {
+export default function CodePanel({ value, onChange, onCompile, searchTrigger, navigateToLine }: CodePanelProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   const onCompileRef = useRef(onCompile)
   const themeCompartment = useRef(new Compartment())
+  const prevValueRef = useRef(value)
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Keep refs current
   onChangeRef.current = onChange
@@ -410,13 +481,40 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger }:
         history(),
         highlightSelectionMatches(),
         search({ top: true }),
+        // Auto-close brackets: {}, [], (), and $$
+        closeBrackets(),
+        // Diff gutter: green/amber bars on AI-changed lines
+        changedLinesField,
+        diffGutterExtension,
+        // LaTeX linting: brace balance, environment mismatches, missing packages
+        lintGutter(),
+        linter(latexLinter, { delay: 400 }),
+        // LaTeX autocomplete: commands, environments, resume snippets
+        autocompletion({
+          override: [latexCommandCompletions, latexEnvironmentCompletions, latexResumeSnippets],
+          activateOnTyping: true,
+          maxRenderedOptions: 20,
+        }),
+        // Teach CodeMirror that LaTeX line comments use %
+        EditorState.languageData.of(() => [{ commentTokens: { line: '%' } }]),
         StreamLanguage.define(stex),
         themeCompartment.current.of(themeExtensions),
         keymap.of([
+          // Auto-close bracket keybindings (Backspace smart-delete)
+          ...closeBracketsKeymap,
+          // Autocomplete navigation (Tab to accept, Escape to close, arrows)
+          ...completionKeymap,
           ...defaultKeymap,
           ...historyKeymap,
           ...searchKeymap,
           indentWithTab,
+          // Smart editing shortcuts
+          { key: 'Ctrl-/', mac: 'Cmd-/', run: toggleLineComment },
+          { key: 'Ctrl-Shift-d', mac: 'Cmd-Shift-d', run: copyLineDown },
+          { key: 'Alt-ArrowUp', run: moveLineUp },
+          { key: 'Alt-ArrowDown', run: moveLineDown },
+          { key: 'Ctrl-Shift-k', mac: 'Cmd-Shift-k', run: deleteLine },
+          { key: 'Shift-Tab', run: indentLess },
           {
             key: 'Ctrl-Enter',
             mac: 'Cmd-Enter',
@@ -461,6 +559,7 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger }:
       observer.disconnect()
       view.destroy()
       viewRef.current = null
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
     }
     // Only create editor once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -473,11 +572,39 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger }:
 
     const currentContent = view.state.doc.toString()
     if (value !== currentContent) {
+      // Compute which lines changed before replacing the document
+      const changed = diffLines(prevValueRef.current, value)
+
       view.dispatch({
         changes: { from: 0, to: currentContent.length, insert: value },
+        effects: changed.size > 0 ? setChangedLines.of(changed) : [],
       })
+
+      // Auto-clear diff markers after 8s
+      if (changed.size > 0) {
+        if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
+        clearTimerRef.current = setTimeout(() => {
+          viewRef.current?.dispatch({ effects: setChangedLines.of(new Set()) })
+        }, 8000)
+      }
     }
+
+    prevValueRef.current = value
   }, [value])
+
+  // Scroll editor to a specific 1-based line (triggered by outline panel clicks)
+  useEffect(() => {
+    if (!navigateToLine || !viewRef.current) return
+    const view = viewRef.current
+    const lineCount = view.state.doc.lines
+    const targetLine = Math.max(1, Math.min(navigateToLine, lineCount))
+    const pos = view.state.doc.line(targetLine).from
+    view.dispatch({
+      selection: { anchor: pos },
+      effects: EditorView.scrollIntoView(pos, { y: 'center' }),
+    })
+    view.focus()
+  }, [navigateToLine])
 
   // Toggle search panel when searchTrigger changes
   useEffect(() => {

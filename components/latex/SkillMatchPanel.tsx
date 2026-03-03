@@ -69,64 +69,72 @@ export default function SkillMatchPanel({ jobData, latexSource }: SkillMatchPane
 
   if (total === 0) return null
 
-  const barColor =
-    percentage >= 80 ? 'bg-zinc-700 dark:bg-zinc-900' :
-    percentage >= 50 ? 'bg-zinc-400 dark:bg-zinc-500' :
-    'bg-zinc-300'
+  // Color-coded by score
+  const barFill =
+    percentage >= 80 ? 'bg-emerald-500 dark:bg-emerald-500' :
+    percentage >= 50 ? 'bg-amber-400 dark:bg-amber-400' :
+    'bg-rose-400 dark:bg-rose-500'
 
   const scoreColor =
-    percentage >= 80 ? 'text-zinc-700 dark:text-zinc-200' :
-    percentage >= 50 ? 'text-zinc-500 dark:text-zinc-400' :
-    'text-zinc-400 dark:text-zinc-500'
+    percentage >= 80 ? 'text-emerald-600 dark:text-emerald-400' :
+    percentage >= 50 ? 'text-amber-600 dark:text-amber-400' :
+    'text-rose-600 dark:text-rose-400'
 
   return (
     <div className="bg-zinc-50 dark:bg-[#111111] border-t border-zinc-200 dark:border-latex-border shrink-0">
       {/* Summary bar */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors group"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-            JD Match:
+        <div className="flex items-center gap-2.5">
+          <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 tracking-wide uppercase">
+            JD Match
           </span>
-          {/* Mini progress bar */}
-          <div className="w-20 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+          {/* Progress bar */}
+          <div className="w-24 h-1 bg-zinc-200 dark:bg-zinc-700/80 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+              className={`h-full rounded-full transition-all duration-500 ${barFill}`}
               style={{ width: `${percentage}%` }}
             />
           </div>
-          <span className={`text-xs font-mono font-medium ${scoreColor}`}>
-            {matched.length}/{total} skills ({percentage}%)
+          {/* Score */}
+          <span className={`text-[11px] font-semibold tabular-nums ${scoreColor}`}>
+            {matched.length}/{total}
+          </span>
+          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+            skills
+          </span>
+          <span className={`text-[11px] font-medium ${scoreColor}`}>
+            ({percentage}%)
           </span>
         </div>
         {isExpanded ? (
-          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+          <ChevronDown className="w-3 h-3 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" />
         ) : (
-          <ChevronUp className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+          <ChevronUp className="w-3 h-3 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" />
         )}
       </button>
 
       {/* Expanded detail */}
       {isExpanded && (
-        <div className="px-3 pb-2 max-h-32 overflow-y-auto">
-          <div className="flex flex-wrap gap-1.5">
+        <div className="px-3 pb-2.5 max-h-32 overflow-y-auto">
+          <div className="flex flex-wrap gap-1">
             {matched.map((skill) => (
               <span
                 key={skill}
-                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-zinc-100 text-zinc-700 rounded-full border border-zinc-300/50 dark:bg-zinc-700/40 dark:text-zinc-300 dark:border-zinc-600/30"
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
               >
-                <Check className="w-2.5 h-2.5" />
+                <Check className="w-2.5 h-2.5 shrink-0" />
                 {skill}
               </span>
             ))}
             {missing.map((skill) => (
               <span
                 key={skill}
-                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-zinc-100 text-zinc-400 rounded-full border border-zinc-200 dark:bg-zinc-800/40 dark:text-zinc-500 dark:border-zinc-700/30"
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-zinc-100 text-zinc-400 border border-zinc-200/70 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/40"
               >
-                <X className="w-2.5 h-2.5" />
+                <X className="w-2.5 h-2.5 shrink-0" />
                 {skill}
               </span>
             ))}
