@@ -49,13 +49,22 @@ export async function POST(request: NextRequest) {
       .join('\n\n')
 
     // Builder mode: inject guided builder system prompt
+    // Infer current phase from conversation length as a rough signal
+    const builderPhase: BuilderPhase =
+      messages.length <= 1 ? 'career-stage' :
+      messages.length <= 3 ? 'contact' :
+      messages.length <= 6 ? 'education' :
+      messages.length <= 14 ? 'experience' :
+      messages.length <= 18 ? 'projects' :
+      messages.length <= 20 ? 'skills' : 'generate'
+
     const builderContext = builderMode
       ? [
           '',
-          getBuilderSystemPrompt(
-            (messages.length <= 2 ? 'career-stage' : 'experience') as BuilderPhase,
-            {}
-          ),
+          getBuilderSystemPrompt(builderPhase, {}),
+          '',
+          'EXISTING LATEX (update this as you collect info — do not discard content already there):',
+          latexSource,
           '',
         ].join('\n')
       : ''
