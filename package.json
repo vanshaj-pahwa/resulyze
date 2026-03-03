@@ -37,6 +37,7 @@
     "file-saver": "^2.0.5",
     "formidable": "^3.5.4",
     "html2canvas": "^1.4.1",
+    "jsonrepair": "^3.13.2",
     "jspdf": "^4.0.0",
     "lucide-react": "^0.294.0",
     "mammoth": "^1.11.0",

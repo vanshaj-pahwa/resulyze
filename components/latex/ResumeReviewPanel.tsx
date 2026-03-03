@@ -367,6 +367,14 @@ export default function ResumeReviewPanel({
                 </ul>
               </div>
             )}
+
+            {/* Purpose note */}
+            <div className="px-3 py-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-700/40">
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                <span className="font-semibold text-zinc-500 dark:text-zinc-400">Resume Review</span> audits quality for human readers — writing strength, impact, and job relevance.
+                For machine parsing, keyword coverage, and ATS pass rates, use <span className="font-semibold text-zinc-500 dark:text-zinc-400">ATS Score</span>.
+              </p>
+            </div>
           </>
         )}
       </div>

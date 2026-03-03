@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
 import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List } from 'lucide-react'
@@ -10,6 +10,7 @@ import { fetchWithKey } from '@/lib/fetch'
 import { useChatLatex } from '@/hooks/useChatLatex'
 import { useResumeVersions } from '@/hooks/useResumeVersions'
 import { useResumeReview } from '@/hooks/useResumeReview'
+import { useAtsScore } from '@/hooks/useAtsScore'
 import { ShortcutsDialog } from '@/components/ui/shortcuts-dialog'
 
 const CodePanel = dynamic(() => import('./CodePanel'), { ssr: false })
@@ -21,6 +22,7 @@ const VersionHistory = dynamic(() => import('./VersionHistory'), { ssr: false })
 const ResumeReviewPanel = dynamic(() => import('./ResumeReviewPanel'), { ssr: false })
 const OverflowBanner = dynamic(() => import('./OverflowBanner'), { ssr: false })
 const OutlinePanel = dynamic(() => import('./OutlinePanel'), { ssr: false })
+const AtsScorePanel = dynamic(() => import('./AtsScorePanel'), { ssr: false })
 
 interface LatexEditorProps {
   readonly jobData: any
@@ -70,6 +72,15 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   // Outline panel state
   const [showOutline, setShowOutline] = useState(false)
   const [navigateLine, setNavigateLine] = useState(0)
+
+  // ATS score panel state
+  const [showAts, setShowAts] = useState(false)
+  const atsKeywords = useMemo(
+    () => [...(jobData?.skills ?? []), ...(jobData?.keywords ?? [])],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(jobData?.skills), JSON.stringify(jobData?.keywords)]
+  )
+  const { analysis: atsAnalysis, isAnalyzing: isAtsAnalyzing, error: atsError } = useAtsScore(pdfBlobUrl, atsKeywords)
 
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -740,6 +751,18 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               onUpdateLabel={updateLabel}
               onClose={() => setShowHistory(false)}
             />
+          ) : showAts ? (
+            <AtsScorePanel
+              analysis={atsAnalysis}
+              isAnalyzing={isAtsAnalyzing}
+              error={atsError}
+              onClose={() => setShowAts(false)}
+              onSendToChat={(msg) => {
+                setShowAts(false)
+                setIsChatOpen(true)
+                setTimeout(() => chat.sendMessage(msg), 50)
+              }}
+            />
           ) : (
             <PreviewPanel
               pdfUrl={pdfBlobUrl}
@@ -748,6 +771,10 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               onCompile={handleCompile}
               onDownload={handleDownload}
               onPageCount={handlePageCount}
+              atsScore={atsAnalysis?.score ?? null}
+              isAtsAnalyzing={isAtsAnalyzing}
+              showAts={showAts}
+              onToggleAts={() => setShowAts(prev => !prev)}
             />
           )}
         </div>

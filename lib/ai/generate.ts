@@ -2,7 +2,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export async function generateWithRetry(
   model: any,
-  prompt: string,
+  prompt: string | any[],
   maxRetries = 3,
   initialDelay = 1000
 ): Promise<string> {

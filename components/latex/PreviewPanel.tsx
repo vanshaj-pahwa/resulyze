@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { RotateCw, Download, Loader2, AlertCircle, ZoomIn, ZoomOut } from 'lucide-react'
+import { RotateCw, Download, Loader2, AlertCircle, ZoomIn, ZoomOut, ScanText } from 'lucide-react'
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174'
 
@@ -12,6 +12,11 @@ interface PreviewPanelProps {
   onCompile: () => void
   onDownload: () => void
   onPageCount?: (count: number) => void
+  // ATS
+  atsScore?: number | null
+  isAtsAnalyzing?: boolean
+  showAts?: boolean
+  onToggleAts?: () => void
 }
 
 // Load pdf.js from CDN once
@@ -100,7 +105,7 @@ async function renderPage(
   }
 }
 
-export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload, onPageCount }: PreviewPanelProps) {
+export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload, onPageCount, atsScore, isAtsAnalyzing, showAts, onToggleAts }: PreviewPanelProps) {
   const [scale, setScale] = useState(1)
   const [numPages, setNumPages] = useState(0)
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -209,19 +214,89 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="h-10 bg-zinc-50 dark:bg-latex-toolbar flex items-center justify-between px-2.5 border-b border-zinc-200 dark:border-latex-border shrink-0">
-        {/* Compile — primary action, stays filled for visual hierarchy */}
-        <button
-          onClick={onCompile}
-          disabled={isCompiling}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-150 bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-        >
-          {isCompiling ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-          ) : (
-            <RotateCw className="w-3.5 h-3.5 shrink-0" />
+        <div className="flex items-center gap-1">
+          {/* Compile — primary action */}
+          <button
+            onClick={onCompile}
+            disabled={isCompiling}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-150 bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {isCompiling ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+            ) : (
+              <RotateCw className="w-3.5 h-3.5 shrink-0" />
+            )}
+            <span>{isCompiling ? 'Compiling…' : 'Compile'}</span>
+          </button>
+
+          {/* ATS Score — split-pill diagnostic readout */}
+          {onToggleAts && (
+            <button
+              onClick={onToggleAts}
+              title="ATS compatibility score — analyzes the compiled PDF"
+              className={`group flex items-stretch h-7 rounded-md overflow-hidden border transition-all duration-200 whitespace-nowrap
+                ${atsScore == null
+                  ? showAts
+                    ? 'border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-white/10'
+                    : 'border-zinc-200 dark:border-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-600'
+                  : atsScore >= 85
+                    ? showAts
+                      ? 'border-emerald-400 dark:border-emerald-500/60 bg-emerald-50 dark:bg-emerald-500/10'
+                      : 'border-emerald-200 dark:border-emerald-500/30 hover:border-emerald-400 dark:hover:border-emerald-500/60'
+                    : atsScore >= 60
+                    ? showAts
+                      ? 'border-amber-400 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-500/10'
+                      : 'border-amber-200 dark:border-amber-500/30 hover:border-amber-400 dark:hover:border-amber-500/60'
+                    : showAts
+                      ? 'border-red-400 dark:border-red-500/60 bg-red-50 dark:bg-red-500/10'
+                      : 'border-red-200 dark:border-red-500/30 hover:border-red-400 dark:hover:border-red-500/60'
+                }
+              `}
+            >
+              {/* Label section */}
+              <div className="flex items-center gap-1 px-2 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
+                <ScanText className="w-3 h-3 shrink-0" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider">ATS</span>
+              </div>
+
+              {/* Divider */}
+              <div className={`w-px self-stretch transition-colors
+                ${atsScore == null
+                  ? 'bg-zinc-200 dark:bg-zinc-700/70'
+                  : atsScore >= 85
+                  ? 'bg-emerald-200 dark:bg-emerald-500/30'
+                  : atsScore >= 60
+                  ? 'bg-amber-200 dark:bg-amber-500/30'
+                  : 'bg-red-200 dark:bg-red-500/30'
+                }
+              `} />
+
+              {/* Score section */}
+              <div className={`flex items-center justify-center px-2 min-w-[2rem] transition-colors
+                ${atsScore == null
+                  ? 'text-zinc-400 dark:text-zinc-500'
+                  : atsScore >= 85
+                  ? 'text-emerald-700 dark:text-emerald-300'
+                  : atsScore >= 60
+                  ? 'text-amber-700 dark:text-amber-300'
+                  : 'text-red-700 dark:text-red-300'
+                }
+              `}>
+                {isAtsAnalyzing && atsScore == null ? (
+                  <span className="flex gap-[2px] items-center">
+                    <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold tabular-nums leading-none">
+                    {atsScore ?? '—'}
+                  </span>
+                )}
+              </div>
+            </button>
           )}
-          <span>{isCompiling ? 'Compiling…' : 'Compile'}</span>
-        </button>
+        </div>
 
         {/* Zoom controls + download */}
         {pdfUrl && !pdfError && (
