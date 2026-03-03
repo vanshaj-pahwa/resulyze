@@ -71,7 +71,7 @@ export function analyzeAts(latex: string, jobKeywords: string[] = []): AtsAnalys
   const detectedSections: string[] = []
 
   // Collect all section names
-  for (const m of latex.matchAll(SECTION_RE)) {
+  for (const m of Array.from(latex.matchAll(SECTION_RE))) {
     detectedSections.push(m[1].trim())
   }
 

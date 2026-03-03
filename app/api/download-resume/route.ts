@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// @ts-ignore — TextRun exists at runtime but is absent from docx v8.5.0 type declarations
 import { Document, Packer, Paragraph, TextRun, AlignmentType, TabStopType, ExternalHyperlink } from 'docx'
 import jsPDF from 'jspdf'
 import { parse as parseHtml } from 'node-html-parser'
