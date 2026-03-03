@@ -128,13 +128,45 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
       const change = msg.changes[changeIndex]
       if (change.status) return prev // already resolved
 
-      // Apply this single change via string replacement on current source
       const currentLatex = latexRef.current
-      const newLatex = currentLatex.replace(change.before, change.after)
-      if (newLatex !== currentLatex) {
-        onApplyChanges(newLatex)
+
+      // Try exact string replacement first (works for single-line snippets)
+      const replaced = currentLatex.replace(change.before, change.after)
+      const replacementWorked = replaced !== currentLatex
+
+      if (replacementWorked) {
+        onApplyChanges(replaced)
+        // Mark only this change as applied
+        return prev.map(m => {
+          if (m.id !== messageId) return m
+          const updatedChanges = m.changes!.map((c, i) =>
+            i === changeIndex ? { ...c, status: 'applied' as const } : c
+          )
+          const allResolved = updatedChanges.every(c => c.status)
+          const anyApplied = updatedChanges.some(c => c.status === 'applied')
+          return {
+            ...m,
+            changes: updatedChanges,
+            status: allResolved ? (anyApplied ? 'applied' as const : 'dismissed' as const) : m.status,
+          }
+        })
       }
 
+      // Replacement failed (abbreviated snippet didn't match) — fall back to proposedLatex
+      if (msg.proposedLatex) {
+        onApplyChanges(msg.proposedLatex)
+        // Mark ALL pending changes as applied since proposedLatex contains all of them
+        return prev.map(m => {
+          if (m.id !== messageId) return m
+          return {
+            ...m,
+            status: 'applied' as const,
+            changes: m.changes!.map(c => ({ ...c, status: c.status || 'applied' as const })),
+          }
+        })
+      }
+
+      // No proposedLatex either — just mark as applied (UI feedback) without source change
       return prev.map(m => {
         if (m.id !== messageId) return m
         const updatedChanges = m.changes!.map((c, i) =>
@@ -172,15 +204,20 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
       const msg = prev.find(m => m.id === messageId)
       if (!msg?.changes) return prev
 
-      // Apply all pending changes sequentially
-      let currentLatex = latexRef.current
-      for (const change of msg.changes) {
-        if (!change.status) {
-          const newLatex = currentLatex.replace(change.before, change.after)
-          currentLatex = newLatex
+      // Prefer proposedLatex (authoritative full source) over sequential snippet replacements
+      if (msg.proposedLatex) {
+        onApplyChanges(msg.proposedLatex)
+      } else {
+        // Fall back to sequential string replacements (may partially fail for multi-line changes)
+        let currentLatex = latexRef.current
+        for (const change of msg.changes) {
+          if (!change.status) {
+            const newLatex = currentLatex.replace(change.before, change.after)
+            currentLatex = newLatex
+          }
         }
+        onApplyChanges(currentLatex)
       }
-      onApplyChanges(currentLatex)
 
       return prev.map(m =>
         m.id === messageId ? {

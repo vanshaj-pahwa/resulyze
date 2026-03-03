@@ -42,7 +42,7 @@ export default function ChatPanel({
   }, [messages, isLoading])
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900 border-x border-zinc-200 dark:border-zinc-700/50">
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
       {/* Header */}
       <div className="h-10 bg-zinc-50 dark:bg-zinc-800/80 flex items-center justify-between px-3 border-b border-zinc-200 dark:border-zinc-700/50 shrink-0">
         <div className="flex items-center gap-2">

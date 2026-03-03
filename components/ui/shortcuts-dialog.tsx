@@ -4,12 +4,18 @@ import { useState } from 'react'
 import { Keyboard, X } from 'lucide-react'
 
 const shortcuts = [
-  { keys: ['Ctrl', 'Enter'], description: 'Compile LaTeX to PDF', context: 'Editor' },
-  { keys: ['Ctrl', 'Shift', 'L'], description: 'Toggle AI chat panel', context: 'Editor' },
-  { keys: ['Ctrl', 'Z'], description: 'Undo edit', context: 'Editor' },
-  { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo edit', context: 'Editor' },
-  { keys: ['Tab'], description: 'Indent selection', context: 'Editor' },
-  { keys: ['Shift', 'Tab'], description: 'Dedent selection', context: 'Editor' },
+  { keys: ['Ctrl', 'Enter'], description: 'Compile LaTeX to PDF' },
+  { keys: ['Ctrl', 'Shift', 'L'], description: 'Toggle AI chat panel' },
+  { keys: ['Ctrl', 'Z'], description: 'Undo' },
+  { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo' },
+  { keys: ['Ctrl', '/'], description: 'Toggle % comment' },
+  { keys: ['Ctrl', 'Shift', 'D'], description: 'Duplicate line' },
+  { keys: ['Alt', '↑ / ↓'], description: 'Move line up / down' },
+  { keys: ['Ctrl', 'Shift', 'K'], description: 'Delete line' },
+  { keys: ['Tab'], description: 'Indent selection' },
+  { keys: ['Shift', 'Tab'], description: 'Dedent selection' },
+  { keys: ['Ctrl', 'F'], description: 'Find & Replace' },
+  { keys: ['Ctrl', 'Shift', 'O'], description: 'Document outline' },
 ]
 
 function Kbd({ children }: { children: string }) {
@@ -27,11 +33,11 @@ export function ShortcutsDialog({ compact = false }: { compact?: boolean }) {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-zinc-500 hover:text-zinc-800 hover:bg-black/5 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/10 rounded transition-colors border border-zinc-200 dark:border-zinc-700"
+        className={`flex items-center gap-1.5 rounded-md text-[11px] font-medium transition-all duration-150 whitespace-nowrap text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08] ${compact ? 'px-1.5 py-1' : 'px-2 py-1'}`}
         title="Keyboard shortcuts"
       >
-        <Keyboard className="w-3.5 h-3.5" />
-        {!compact && <span className="hidden sm:inline">Shortcuts</span>}
+        <Keyboard className="w-3.5 h-3.5 shrink-0" />
+        {!compact && <span>Keys</span>}
       </button>
 
       {isOpen && (
@@ -60,11 +66,11 @@ export function ShortcutsDialog({ compact = false }: { compact?: boolean }) {
               {shortcuts.map((s, i) => (
                 <div key={i} className="flex items-center justify-between gap-4">
                   <span className="text-sm text-zinc-600 dark:text-zinc-400">{s.description}</span>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     {s.keys.map((key, j) => (
                       <span key={j} className="flex items-center gap-0.5">
                         <Kbd>{key}</Kbd>
-                        {j < s.keys.length - 1 && <span className="text-zinc-400 text-xs">+</span>}
+                        {j < s.keys.length - 1 && <span className="text-zinc-400 text-[10px] px-0.5">+</span>}
                       </span>
                     ))}
                   </div>
