@@ -82,7 +82,8 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
         method: 'POST',
         body: JSON.stringify({
           companyName: effectiveJobData.company,
-          jobTitle: effectiveJobData.jobTitle || ''
+          jobTitle: effectiveJobData.jobTitle || '',
+          jobDescription: effectiveJobData.jobDescription || ''
         })
       })
 

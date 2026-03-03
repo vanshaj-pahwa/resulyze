@@ -1,41 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGeminiClient } from '@/lib/gemini'
-
-const DEFAULT_USER_ID = 'default-user'
-
-// Helper function to delay execution
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper function to attempt API call with retries
-const generateWithRetry = async (model: any, prompt: string, maxRetries = 3, initialDelay = 1000) => {
-  let lastError;
-  let retries = 0;
-  
-  while (retries < maxRetries) {
-    try {
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
-    } catch (error: any) {
-      lastError = error;
-      
-      // Log the actual error for debugging
-      console.log(`Attempt ${retries + 1} failed:`, error.message);
-      
-      // Retry on server errors (5xx) or rate limiting (429)
-      if ((error.status >= 500 && error.status < 600) || error.status === 429) {
-        console.log(`Retrying in ${initialDelay * Math.pow(2, retries)}ms...`);
-        await delay(initialDelay * Math.pow(2, retries)); // Exponential backoff
-        retries++;
-      } else {
-        // For other errors (4xx, model not found, auth errors), throw immediately
-        throw error;
-      }
-    }
-  }
-  
-  // If we've exhausted our retries, throw the last error
-  throw lastError;
-};
+import { generateWithRetry } from '@/lib/ai/generate'
 
 // Fallback answer generator when AI service is unavailable
 const generateFallbackAnswer = (question: string, category: string, tips: string[]) => {
@@ -98,20 +63,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40,
-        // Increase token limit for system design questions that need more detailed code examples
-        maxOutputTokens: category === 'Problem Solving' || 
-                        category === 'System Design' || 
-                        (question && question.toLowerCase().includes('system design')) || 
-                        (question && question.toLowerCase().includes('architecture')) ? 
-                        4096 : 1024,
-      }
-    });
+    const model = genAI.getGenerativeModel(
+      {
+        model: 'gemini-3-flash-preview',
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: category === 'Problem Solving' ||
+                          category === 'System Design' ||
+                          (question && question.toLowerCase().includes('system design')) ||
+                          (question && question.toLowerCase().includes('architecture')) ?
+                          4096 : 1024,
+        },
+      },
+      { apiVersion: 'v1beta' }
+    )
 
     // Ensure we handle all possible null/undefined values safely
     const skillsArray = resumeData?.technicalSkills?.languages || [];
@@ -161,35 +128,12 @@ export async function POST(request: NextRequest) {
     `;
     
     try {
-      // Try to generate answer with retries
-      const answer = await generateWithRetry(model, prompt);
-      return NextResponse.json({ answer });
+      const answer = await generateWithRetry(model, prompt)
+      return NextResponse.json({ answer })
     } catch (generationError: any) {
-      console.error('gemini-3-flash-preview failed:', generationError.message);
-      
-      // Try fallback to gemini-2.0-flash if the preview model fails
-      try {
-        console.log('Trying gemini-2.0-flash as fallback...');
-        const fallbackModel = genAI.getGenerativeModel({ 
-          model: 'gemini-2.0-flash',
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 1024,
-          }
-        });
-        
-        const answer = await generateWithRetry(fallbackModel, prompt);
-        return NextResponse.json({ answer });
-      } catch (fallbackError: any) {
-        console.error('gemini-2.0-flash also failed:', fallbackError.message);
-        
-        // If both models fail, use local fallback generator
-        console.log('Using local fallback answer generator');
-        const fallbackAnswer = generateFallbackAnswer(question, category, tips);
-        return NextResponse.json({ answer: fallbackAnswer });
-      }
+      console.error('Answer generation failed:', generationError.message)
+      const fallbackAnswer = generateFallbackAnswer(question, category, tips)
+      return NextResponse.json({ answer: fallbackAnswer })
     }
   } catch (error: unknown) {
     console.error('Error generating interview answer:', error);

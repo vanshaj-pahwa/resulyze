@@ -41,15 +41,18 @@ export async function POST(request: NextRequest) {
     const mimeType = fileType === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
     // Initialize the model
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.1, // Keep it factual
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 8192,
-      }
-    });
+    const model = genAI.getGenerativeModel(
+      {
+        model: 'gemini-3-flash-preview',
+        generationConfig: {
+          temperature: 0.1,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 8192,
+        },
+      },
+      { apiVersion: 'v1beta' }
+    )
 
     // First - extract text from the document
     const textExtractionResult = await model.generateContent({

@@ -27,7 +27,7 @@ export function ShortcutsDialog({ compact = false }: { compact?: boolean }) {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-white/10 rounded transition-colors border border-zinc-700"
+        className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-zinc-500 hover:text-zinc-800 hover:bg-black/5 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/10 rounded transition-colors border border-zinc-200 dark:border-zinc-700"
         title="Keyboard shortcuts"
       >
         <Keyboard className="w-3.5 h-3.5" />
