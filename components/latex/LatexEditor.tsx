@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
-import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List } from 'lucide-react'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List, Pilcrow, Hash } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
@@ -31,6 +31,29 @@ interface LatexEditorProps {
 
 const STORAGE_KEY = 'resulyze-latex-source'
 const TITLE_STORAGE_KEY = 'resulyze-resume-title'
+
+// ─── Section helpers for Go-to-Section palette ───────────────────────────────
+
+interface LatexSection {
+  line: number
+  level: 'section' | 'subsection' | 'subsubsection'
+  title: string
+}
+
+function parseLatexSections(latex: string): LatexSection[] {
+  const sections: LatexSection[] = []
+  const lines = latex.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const sm = line.match(/\\section\*?\{([^}]+)\}/)
+    const ssm = line.match(/\\subsection\*?\{([^}]+)\}/)
+    const sssm = line.match(/\\subsubsection\*?\{([^}]+)\}/)
+    if (sm) sections.push({ line: i + 1, level: 'section', title: sm[1] })
+    else if (ssm) sections.push({ line: i + 1, level: 'subsection', title: ssm[1] })
+    else if (sssm) sections.push({ line: i + 1, level: 'subsubsection', title: sssm[1] })
+  }
+  return sections
+}
 
 export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditorProps) {
   const [latexSource, setLatexSource] = useState<string>(DEFAULT_LATEX_SOURCE)
@@ -72,6 +95,19 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   // Outline panel state
   const [showOutline, setShowOutline] = useState(false)
   const [navigateLine, setNavigateLine] = useState(0)
+
+  // Editor visual features
+  const [showWhitespace, setShowWhitespace] = useState(false)
+
+  // Go to Section palette
+  const [showSectionPalette, setShowSectionPalette] = useState(false)
+  const [sectionPaletteQuery, setSectionPaletteQuery] = useState('')
+  const sections = useMemo(() => parseLatexSections(latexSource), [latexSource])
+  const filteredSections = useMemo(() => {
+    if (!sectionPaletteQuery.trim()) return sections
+    const q = sectionPaletteQuery.toLowerCase()
+    return sections.filter(s => s.title.toLowerCase().includes(q))
+  }, [sections, sectionPaletteQuery])
 
   // ATS score panel state
   const [showAts, setShowAts] = useState(false)
@@ -302,16 +338,23 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     }
   }, [pendingCompile, isCompiling, handleCompile])
 
-  // Keyboard shortcuts: Ctrl+Shift+L (chat), Ctrl+Shift+O (outline)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
         e.preventDefault()
         setIsChatOpen(prev => !prev)
       }
+      // Ctrl+Shift+O → Go to Section palette
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'O') {
         e.preventDefault()
-        setShowOutline(prev => !prev)
+        setShowSectionPalette(prev => !prev)
+        setSectionPaletteQuery('')
+      }
+      // Escape closes the section palette
+      if (e.key === 'Escape') {
+        setShowSectionPalette(false)
+        setSectionPaletteQuery('')
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -581,7 +624,27 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                       {!(isChatOpen || showReview) && <span>Outline</span>}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Document outline (Ctrl+Shift+O)</TooltipContent>
+                  <TooltipContent>Document outline</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Whitespace toggle */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setShowWhitespace(prev => !prev)}
+                      className={`p-1.5 rounded-md transition-all duration-150
+                        ${showWhitespace
+                          ? 'text-zinc-800 bg-zinc-200/80 dark:text-zinc-100 dark:bg-white/10'
+                          : 'text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-600 dark:hover:text-zinc-300 dark:hover:bg-white/[0.08]'
+                        }
+                      `}
+                    >
+                      <Pilcrow className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Show whitespace characters</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
@@ -638,6 +701,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                 onCompile={handleCompile}
                 searchTrigger={searchTrigger}
                 navigateToLine={navigateLine}
+                showWhitespace={showWhitespace}
               />
             </div>
             {showOutline && (
@@ -780,6 +844,82 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
         </div>
       </div>
       </div>
+
+      {/* Go to Section palette (Ctrl+Shift+O) */}
+      {showSectionPalette && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/30 backdrop-blur-[1px]"
+          onClick={() => { setShowSectionPalette(false); setSectionPaletteQuery('') }}
+        >
+          <div
+            className="w-80 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700/60 shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Search input */}
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
+              <Hash className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+              <input
+                autoFocus
+                type="text"
+                placeholder="Go to section…"
+                value={sectionPaletteQuery}
+                onChange={e => setSectionPaletteQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && filteredSections.length > 0) {
+                    const s = filteredSections[0]
+                    setNavigateLine(s.line)
+                    setTimeout(() => setNavigateLine(0), 100)
+                    setShowSectionPalette(false)
+                    setSectionPaletteQuery('')
+                  }
+                  if (e.key === 'Escape') { setShowSectionPalette(false); setSectionPaletteQuery('') }
+                }}
+                className="flex-1 text-[12px] bg-transparent border-none outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+              />
+              <kbd className="text-[10px] text-zinc-300 dark:text-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono">Esc</kbd>
+            </div>
+            {/* Section list */}
+            <div className="max-h-64 overflow-y-auto py-1 no-scrollbar">
+              {sections.length === 0 ? (
+                <p className="px-3 py-5 text-center text-[11px] text-zinc-400 dark:text-zinc-600">No sections found in document</p>
+              ) : filteredSections.length === 0 ? (
+                <p className="px-3 py-5 text-center text-[11px] text-zinc-400 dark:text-zinc-600">No match</p>
+              ) : (
+                filteredSections.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setNavigateLine(s.line)
+                      setTimeout(() => setNavigateLine(0), 100)
+                      setShowSectionPalette(false)
+                      setSectionPaletteQuery('')
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                  >
+                    <span className={`text-[10px] font-mono text-zinc-300 dark:text-zinc-700 shrink-0 w-4
+                      ${s.level === 'section' ? '' : s.level === 'subsection' ? 'pl-2' : 'pl-4'}`}>
+                      {s.level === 'section' ? '§' : s.level === 'subsection' ? '›' : '»'}
+                    </span>
+                    <span className={`text-[12px] flex-1 truncate
+                      ${s.level === 'section' ? 'text-zinc-800 dark:text-zinc-200 font-medium' :
+                        s.level === 'subsection' ? 'text-zinc-600 dark:text-zinc-400' :
+                        'text-zinc-500 dark:text-zinc-500'}`}>
+                      {s.title}
+                    </span>
+                    <span className="text-[10px] text-zinc-300 dark:text-zinc-700 font-mono shrink-0">:{s.line}</span>
+                  </button>
+                ))
+              )}
+            </div>
+            {sections.length > 0 && (
+              <div className="px-3 py-1.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{filteredSections.length} section{filteredSections.length !== 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-zinc-300 dark:text-zinc-700">↵ to jump</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

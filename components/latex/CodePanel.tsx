@@ -1,9 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, GutterMarker, gutter } from '@codemirror/view'
-import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder } from '@codemirror/state'
-import { defaultKeymap, indentWithTab, indentLess, history, historyKeymap, copyLineDown, moveLineUp, moveLineDown, deleteLine, toggleLineComment } from '@codemirror/commands'
+import {
+  EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
+  drawSelection, GutterMarker, gutter, ViewPlugin, Decoration,
+  ViewUpdate, highlightWhitespace,
+} from '@codemirror/view'
+import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, RangeSet } from '@codemirror/state'
+import {
+  defaultKeymap, indentWithTab, indentLess, history, historyKeymap,
+  copyLineDown, moveLineUp, moveLineDown, deleteLine, toggleLineComment,
+  selectParentSyntax,
+} from '@codemirror/commands'
 import { bracketMatching, foldGutter, indentOnInput, StreamLanguage } from '@codemirror/language'
 import { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap } from '@codemirror/autocomplete'
 import { latexCommandCompletions, latexEnvironmentCompletions, latexResumeSnippets } from '@/lib/latex/completions'
@@ -14,7 +22,61 @@ import { search, searchKeymap, highlightSelectionMatches, openSearchPanel, close
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 
-// Dark theme
+// ─── Indent guides ───────────────────────────────────────────────────────────
+
+const indentGuideMark = Decoration.mark({ class: 'cm-indent-guide' })
+
+function buildIndentGuideDecorations(view: EditorView): RangeSet<Decoration> {
+  const builder = new RangeSetBuilder<Decoration>()
+  const tabSize = 2
+  const { from, to } = view.viewport
+
+  for (let pos = from; pos <= to;) {
+    const line = view.state.doc.lineAt(pos)
+    const text = line.text
+
+    // Count leading spaces (treat tabs as tabSize spaces)
+    let leadingSpaces = 0
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === ' ') leadingSpaces++
+      else if (text[i] === '\t') leadingSpaces += tabSize
+      else break
+    }
+
+    // Only draw guides if there's non-whitespace content on the line
+    if (leadingSpaces > 0 && leadingSpaces < text.length) {
+      const levels = Math.floor(leadingSpaces / tabSize)
+      for (let level = 0; level < levels; level++) {
+        const charPos = level * tabSize
+        if (charPos < line.length) {
+          builder.add(line.from + charPos, line.from + charPos + 1, indentGuideMark)
+        }
+      }
+    }
+
+    pos = line.to + 1
+  }
+
+  return builder.finish()
+}
+
+const indentGuidesPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: RangeSet<Decoration>
+    constructor(view: EditorView) {
+      this.decorations = buildIndentGuideDecorations(view)
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = buildIndentGuideDecorations(update.view)
+      }
+    }
+  },
+  { decorations: (v) => v.decorations }
+)
+
+// ─── Dark theme ──────────────────────────────────────────────────────────────
+
 const prismDarkTheme = EditorView.theme({
   '&': {
     backgroundColor: '#0d0d0d',
@@ -51,9 +113,16 @@ const prismDarkTheme = EditorView.theme({
   '&.cm-focused .cm-selectionBackground': {
     backgroundColor: '#264f78 !important',
   },
+  // Enhanced bracket matching: vivid teal highlight
   '.cm-matchingBracket': {
-    backgroundColor: '#3a3a3a',
-    outline: '1px solid #555',
+    backgroundColor: 'rgba(86, 182, 194, 0.25) !important',
+    outline: '1px solid rgba(86, 182, 194, 0.6) !important',
+    borderRadius: '2px',
+  },
+  '.cm-nonmatchingBracket': {
+    backgroundColor: 'rgba(224, 108, 117, 0.25) !important',
+    outline: '1px solid rgba(224, 108, 117, 0.6) !important',
+    borderRadius: '2px',
   },
   '.cm-foldGutter': {
     width: '12px',
@@ -169,9 +238,22 @@ const prismDarkTheme = EditorView.theme({
     color: '#e0e0e0',
     backgroundColor: 'transparent !important',
   },
+  // Indent guides: subtle vertical lines
+  '.cm-indent-guide': {
+    borderLeft: '1px solid rgba(255, 255, 255, 0.07)',
+  },
+  // Whitespace dots/arrows
+  '.cm-highlightSpace::before': {
+    color: 'rgba(255,255,255,0.18) !important',
+  },
+  '.cm-highlightTab::before': {
+    color: 'rgba(255,255,255,0.18) !important',
+    borderColor: 'rgba(255,255,255,0.18) !important',
+  },
 })
 
-// Light theme
+// ─── Light theme ─────────────────────────────────────────────────────────────
+
 const prismLightTheme = EditorView.theme({
   '&': {
     backgroundColor: '#ffffff',
@@ -208,9 +290,16 @@ const prismLightTheme = EditorView.theme({
   '&.cm-focused .cm-selectionBackground': {
     backgroundColor: '#b3d4ff !important',
   },
+  // Enhanced bracket matching: vivid blue highlight
   '.cm-matchingBracket': {
-    backgroundColor: '#e0e0e0',
-    outline: '1px solid #bbb',
+    backgroundColor: 'rgba(0, 120, 200, 0.15) !important',
+    outline: '1px solid rgba(0, 120, 200, 0.5) !important',
+    borderRadius: '2px',
+  },
+  '.cm-nonmatchingBracket': {
+    backgroundColor: 'rgba(200, 50, 50, 0.15) !important',
+    outline: '1px solid rgba(200, 50, 50, 0.5) !important',
+    borderRadius: '2px',
   },
   '.cm-foldGutter': {
     width: '12px',
@@ -326,9 +415,22 @@ const prismLightTheme = EditorView.theme({
     color: '#333',
     backgroundColor: 'transparent !important',
   },
+  // Indent guides: subtle vertical lines
+  '.cm-indent-guide': {
+    borderLeft: '1px solid rgba(0, 0, 0, 0.07)',
+  },
+  // Whitespace dots/arrows
+  '.cm-highlightSpace::before': {
+    color: 'rgba(0,0,0,0.2) !important',
+  },
+  '.cm-highlightTab::before': {
+    color: 'rgba(0,0,0,0.2) !important',
+    borderColor: 'rgba(0,0,0,0.2) !important',
+  },
 })
 
-// Dark syntax highlighting
+// ─── Syntax highlighting ──────────────────────────────────────────────────────
+
 const prismDarkHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: '#e5c07b' },
   { tag: tags.name, color: '#e5c07b' },
@@ -347,7 +449,6 @@ const prismDarkHighlightStyle = HighlightStyle.define([
   { tag: tags.heading, color: '#e5c07b', fontWeight: 'bold' },
 ])
 
-// Light syntax highlighting
 const prismLightHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: '#7c4dff' },
   { tag: tags.name, color: '#7c4dff' },
@@ -366,15 +467,13 @@ const prismLightHighlightStyle = HighlightStyle.define([
   { tag: tags.heading, color: '#7c4dff', fontWeight: 'bold' },
 ])
 
-// ---------------------------------------------------------------------------
-// Diff gutter — highlights lines changed by AI (green bar, auto-clears)
-// ---------------------------------------------------------------------------
+// ─── Diff gutter ─────────────────────────────────────────────────────────────
+
 const setChangedLines = StateEffect.define<Set<number>>()
 
 const changedLinesField = StateField.define<Set<number>>({
   create: () => new Set(),
   update(value, tr) {
-    // Clear markers when the user starts typing
     if (tr.docChanged && (tr.isUserEvent('input') || tr.isUserEvent('delete'))) {
       return new Set()
     }
@@ -394,8 +493,8 @@ class DiffMarker extends GutterMarker {
   }
 }
 
-const addedMarker = new DiffMarker('#22c55e')   // green  — line added/changed
-const modifiedMarker = new DiffMarker('#f59e0b') // amber  — line modified in-place
+const addedMarker = new DiffMarker('#22c55e')
+const modifiedMarker = new DiffMarker('#f59e0b')
 
 const diffGutterExtension = gutter({
   class: 'cm-diff-gutter',
@@ -418,7 +517,6 @@ function buildRangeSet(view: EditorView, changedLines: Set<number>) {
   return builder.finish()
 }
 
-/** Return the set of 1-based line numbers that differ between old and new text. */
 function diffLines(oldText: string, newText: string): Set<number> {
   const oldLines = oldText.split('\n')
   const newLines = newText.split('\n')
@@ -434,24 +532,34 @@ function isDark() {
   return document.documentElement.classList.contains('dark')
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 interface CodePanelProps {
   value: string
   onChange: (value: string) => void
   onCompile: () => void
   searchTrigger?: number
   navigateToLine?: number
+  showWhitespace?: boolean
 }
 
-export default function CodePanel({ value, onChange, onCompile, searchTrigger, navigateToLine }: CodePanelProps) {
+export default function CodePanel({
+  value,
+  onChange,
+  onCompile,
+  searchTrigger,
+  navigateToLine,
+  showWhitespace = false,
+}: CodePanelProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   const onCompileRef = useRef(onCompile)
   const themeCompartment = useRef(new Compartment())
+  const whitespaceCompartment = useRef(new Compartment())
   const prevValueRef = useRef(value)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Keep refs current
   onChangeRef.current = onChange
   onCompileRef.current = onCompile
 
@@ -481,45 +589,43 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger, n
         history(),
         highlightSelectionMatches(),
         search({ top: true }),
+        // Indent guides
+        indentGuidesPlugin,
         // Auto-close brackets: {}, [], (), and $$
         closeBrackets(),
-        // Diff gutter: green/amber bars on AI-changed lines
+        // Whitespace rendering (toggleable)
+        whitespaceCompartment.current.of(showWhitespace ? highlightWhitespace() : []),
+        // Diff gutter
         changedLinesField,
         diffGutterExtension,
-        // LaTeX linting: brace balance, environment mismatches, missing packages
+        // LaTeX linting
         lintGutter(),
         linter(latexLinter, { delay: 400 }),
-        // LaTeX autocomplete: commands, environments, resume snippets
+        // LaTeX autocomplete
         autocompletion({
           override: [latexCommandCompletions, latexEnvironmentCompletions, latexResumeSnippets],
           activateOnTyping: true,
           maxRenderedOptions: 20,
         }),
-        // Teach CodeMirror that LaTeX line comments use %
         EditorState.languageData.of(() => [{ commentTokens: { line: '%' } }]),
         StreamLanguage.define(stex),
         themeCompartment.current.of(themeExtensions),
         keymap.of([
-          // Auto-close bracket keybindings (Backspace smart-delete)
           ...closeBracketsKeymap,
-          // Autocomplete navigation (Tab to accept, Escape to close, arrows)
           ...completionKeymap,
           ...defaultKeymap,
           ...historyKeymap,
           ...searchKeymap,
           indentWithTab,
-          // Smart editing shortcuts
           { key: 'Ctrl-/', mac: 'Cmd-/', run: toggleLineComment },
           { key: 'Ctrl-Shift-d', mac: 'Cmd-Shift-d', run: copyLineDown },
           { key: 'Alt-ArrowUp', run: moveLineUp },
           { key: 'Alt-ArrowDown', run: moveLineDown },
           { key: 'Ctrl-Shift-k', mac: 'Cmd-Shift-k', run: deleteLine },
           { key: 'Shift-Tab', run: indentLess },
-          {
-            key: 'Ctrl-Enter',
-            mac: 'Cmd-Enter',
-            run: handleCompile,
-          },
+          // Select enclosing braces/environment
+          { key: 'Ctrl-Shift-m', mac: 'Cmd-Shift-m', run: selectParentSyntax },
+          { key: 'Ctrl-Enter', mac: 'Cmd-Enter', run: handleCompile },
         ]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
@@ -545,9 +651,7 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger, n
       const newTheme = nowDark
         ? [prismDarkTheme, syntaxHighlighting(prismDarkHighlightStyle)]
         : [prismLightTheme, syntaxHighlighting(prismLightHighlightStyle)]
-      view.dispatch({
-        effects: themeCompartment.current.reconfigure(newTheme),
-      })
+      view.dispatch({ effects: themeCompartment.current.reconfigure(newTheme) })
     })
 
     observer.observe(document.documentElement, {
@@ -561,18 +665,16 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger, n
       viewRef.current = null
       if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
     }
-    // Only create editor once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sync external value changes into CodeMirror (e.g., after AI optimization)
+  // Sync external value changes (e.g. after AI edit)
   useEffect(() => {
     const view = viewRef.current
     if (!view) return
 
     const currentContent = view.state.doc.toString()
     if (value !== currentContent) {
-      // Compute which lines changed before replacing the document
       const changed = diffLines(prevValueRef.current, value)
 
       view.dispatch({
@@ -580,7 +682,6 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger, n
         effects: changed.size > 0 ? setChangedLines.of(changed) : [],
       })
 
-      // Auto-clear diff markers after 8s
       if (changed.size > 0) {
         if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
         clearTimerRef.current = setTimeout(() => {
@@ -592,7 +693,18 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger, n
     prevValueRef.current = value
   }, [value])
 
-  // Scroll editor to a specific 1-based line (triggered by outline panel clicks)
+  // Toggle whitespace rendering
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({
+      effects: whitespaceCompartment.current.reconfigure(
+        showWhitespace ? highlightWhitespace() : []
+      ),
+    })
+  }, [showWhitespace])
+
+  // Navigate to a specific line (from outline panel)
   useEffect(() => {
     if (!navigateToLine || !viewRef.current) return
     const view = viewRef.current
@@ -606,7 +718,7 @@ export default function CodePanel({ value, onChange, onCompile, searchTrigger, n
     view.focus()
   }, [navigateToLine])
 
-  // Toggle search panel when searchTrigger changes
+  // Toggle search panel
   useEffect(() => {
     if (searchTrigger && viewRef.current) {
       const view = viewRef.current
