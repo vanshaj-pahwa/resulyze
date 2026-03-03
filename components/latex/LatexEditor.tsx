@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
-import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List, Pilcrow, Hash } from 'lucide-react'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List, Pilcrow, Hash, LayoutTemplate } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
@@ -23,6 +23,8 @@ const ResumeReviewPanel = dynamic(() => import('./ResumeReviewPanel'), { ssr: fa
 const OverflowBanner = dynamic(() => import('./OverflowBanner'), { ssr: false })
 const OutlinePanel = dynamic(() => import('./OutlinePanel'), { ssr: false })
 const AtsScorePanel = dynamic(() => import('./AtsScorePanel'), { ssr: false })
+const TemplatePickerModal = dynamic(() => import('./TemplatePickerModal'), { ssr: false })
+const TrimReviewPanel = dynamic(() => import('./TrimReviewPanel'), { ssr: false })
 
 interface LatexEditorProps {
   readonly jobData: any
@@ -91,10 +93,17 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const [pdfPageCount, setPdfPageCount] = useState(0)
   const [overflowDismissed, setOverflowDismissed] = useState(false)
   const [isTrimming, setIsTrimming] = useState(false)
+  const [trimProposal, setTrimProposal] = useState<import('./TrimReviewModal').TrimProposal | null>(null)
 
   // Outline panel state
   const [showOutline, setShowOutline] = useState(false)
   const [navigateLine, setNavigateLine] = useState(0)
+
+  // Template picker
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
+  // Cache parsed resume data keyed by latexSource — avoids re-parsing on repeated template switches
+  const parsedResumeCache = useRef<{ source: string; data: any } | null>(null)
 
   // Editor visual features
   const [showWhitespace, setShowWhitespace] = useState(false)
@@ -323,6 +332,47 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     toast.success('Version restored')
   }, [latexSource, resumeTitle, saveVersion])
 
+  const handleApplyTemplate = useCallback(async (template: import('@/lib/templates').ResumeTemplate) => {
+    setIsApplyingTemplate(true)
+    setShowTemplatePicker(false)
+
+    try {
+      let parsedData: any
+
+      // Use cached parse result if latexSource hasn't changed since last parse
+      if (parsedResumeCache.current?.source === latexSource) {
+        parsedData = parsedResumeCache.current.data
+      } else {
+        const res = await fetchWithKey('/api/parse-resume-latex', {
+          method: 'POST',
+          body: JSON.stringify({ latexSource }),
+        })
+
+        const json = await res.json()
+
+        if (!res.ok) {
+          throw new Error(json.error || 'Failed to parse resume')
+        }
+
+        parsedData = json.data
+        // Cache for subsequent template switches with the same source
+        parsedResumeCache.current = { source: latexSource, data: parsedData }
+      }
+
+      // Build the target template instantly on the client from the structured data
+      const { buildFromAIData } = await import('@/lib/templates/converter')
+      saveVersion(latexSource, resumeTitle, `Pre-template: ${template.name}`)
+      const converted = buildFromAIData(parsedData, template.id)
+      setLatexSource(converted)
+      setPendingCompile(true)
+      toast.success(`Switched to "${template.name}" — your content was preserved`)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to switch template. Please try again.')
+    } finally {
+      setIsApplyingTemplate(false)
+    }
+  }, [latexSource, resumeTitle, saveVersion])
+
   // Show LaTeX hint on mount if not dismissed
   useEffect(() => {
     if (!localStorage.getItem('resulyze-latex-hint-dismissed')) {
@@ -383,7 +433,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     if (count <= 1) setOverflowDismissed(false) // reset dismiss when back to 1 page
   }, [])
 
-  // Auto-trim handler
+  // Auto-trim handler — fetches proposal, then shows review modal
   const handleTrim = useCallback(async () => {
     if (isTrimming) return
     setIsTrimming(true)
@@ -401,20 +451,74 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
         return
       }
 
-      if (data.trimmedLatex) {
-        saveVersion(latexSource, resumeTitle, 'Pre-trim')
-        setPreviousLatex(latexSource)
-        setLatexSource(data.trimmedLatex)
-        setPendingCompile(true)
-        setOverflowDismissed(true)
-        toast.success('Resume trimmed! Review the changes.')
+      const changes = data.changes ?? []
+      const items = data.items ?? []
+      if (changes.length === 0) {
+        // AI returned no changes — offer a retry via the toast action
+        toast.error("AI couldn't identify changes. Tap to retry.", {
+          action: { label: 'Retry', onClick: () => handleTrim() },
+          duration: 6000,
+        })
+      } else {
+        setShowReview(false)
+        setIsChatOpen(false)
+        setTrimProposal({ changes, items, originalSource: latexSource })
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to trim resume')
     } finally {
       setIsTrimming(false)
     }
-  }, [latexSource, jobData, pdfPageCount, isTrimming, saveVersion, resumeTitle])
+  }, [latexSource, jobData, pdfPageCount, isTrimming])
+
+  // Apply approved trim changes from the review modal — works by line index, not text search
+  const handleApplyTrim = useCallback((approvedIds: string[]) => {
+    const proposal = trimProposal
+    if (!proposal || approvedIds.length === 0) return
+
+    const lines = proposal.originalSource.split('\n')
+    const linesToRemove = new Set<number>()
+    const approvedSet = new Set(approvedIds)
+
+    for (const change of proposal.changes) {
+      if (!approvedSet.has(change.id)) continue
+      const item = proposal.items[change.itemIndex]
+      if (!item) continue
+
+      if (change.type === 'remove') {
+        linesToRemove.add(item.lineNum)
+      } else if (change.type === 'compress' && change.newText) {
+        // Escape LaTeX special chars in AI-generated plain text before inserting
+        const safeText = change.newText
+          .replace(/%/g, '\\%')
+          .replace(/&/g, '\\&')
+          .replace(/#/g, '\\#')
+          .replace(/\$/g, '\\$')
+          .replace(/_/g, '\\_')
+        // Detect the LaTeX command wrapper and replace content
+        const line = lines[item.lineNum]
+        if (/\\resumeItem\{/.test(line)) {
+          lines[item.lineNum] = line.replace(/\\resumeItem\{[^}]*\}/, `\\resumeItem{${safeText}}`)
+        } else if (/\\item\s/.test(line)) {
+          lines[item.lineNum] = line.replace(/(\\item\s).*/, `$1${safeText}`)
+        } else if (/\\textbf\{[^}]+:\}/.test(line)) {
+          // Skill line: \textbf{Cat:} items \\  → replace items part
+          lines[item.lineNum] = line.replace(/(\\textbf\{[^}]+:\}\s*).*?(\\\\)?$/, `$1${safeText} \\\\`)
+        }
+        // Unknown pattern: leave unchanged (safe fallback)
+      }
+    }
+
+    const result = lines.filter((_, i) => !linesToRemove.has(i)).join('\n')
+
+    saveVersion(latexSource, resumeTitle, 'Pre-trim')
+    setPreviousLatex(latexSource)
+    setLatexSource(result)
+    setPendingCompile(true)
+    setOverflowDismissed(true)
+    setTrimProposal(null)
+    toast.success('Trim applied!')
+  }, [trimProposal, latexSource, resumeTitle, saveVersion])
 
   return (
     <div className="flex flex-col gap-3">
@@ -443,7 +547,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left: Code Editor */}
-        <div className={`${isChatOpen || showReview ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full bg-white dark:bg-latex-editor min-w-0 transition-all duration-200`}>
+        <div className={`${isChatOpen || showReview || !!trimProposal ? 'lg:w-[40%]' : 'lg:w-1/2'} h-1/2 lg:h-full bg-white dark:bg-latex-editor min-w-0 transition-all duration-200`}>
           {/* Inner wrapper — flex flex-col h-full, mirrors PreviewPanel pattern so h-full in children resolves correctly */}
           <div className="flex flex-col h-full">
 
@@ -564,6 +668,30 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
               {/* Group divider */}
               <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 mx-0.5 shrink-0" />
+
+              {/* Templates */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => !isApplyingTemplate && setShowTemplatePicker(true)}
+                      disabled={isApplyingTemplate}
+                      className={`flex items-center gap-1.5 rounded-md text-[11px] font-medium transition-all duration-150 whitespace-nowrap
+                        ${isChatOpen || showReview ? 'px-1.5 py-1' : 'px-2 py-1'}
+                        ${isApplyingTemplate
+                          ? 'text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
+                          : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08]'}
+                      `}
+                    >
+                      {isApplyingTemplate
+                        ? <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                        : <LayoutTemplate className="w-3.5 h-3.5 shrink-0" />}
+                      {!(isChatOpen || showReview) && <span>{isApplyingTemplate ? 'Applying…' : 'Templates'}</span>}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{isApplyingTemplate ? 'Converting template…' : 'Choose a resume template'}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               {/* History */}
               <TooltipProvider>
@@ -735,8 +863,8 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
           </div>{/* end inner flex flex-col h-full wrapper */}
         </div>
 
-        {/* Chat Panel or Review Panel — bottom sheet on mobile, inline column on desktop */}
-        {(isChatOpen || showReview) && (
+        {/* Chat Panel, Review Panel, or Trim Panel — bottom sheet on mobile, inline column on desktop */}
+        {(isChatOpen || showReview || !!trimProposal) && (
           <>
             {/* Desktop column divider */}
             <div className="hidden lg:block w-px bg-zinc-200 dark:bg-latex-border shrink-0" />
@@ -747,6 +875,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               onClick={() => {
                 setIsChatOpen(false)
                 setShowReview(false)
+                setTrimProposal(null)
                 resumeReview.clearReview()
               }}
             />
@@ -773,6 +902,17 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                     resumeReview.clearReview()
                   }}
                 />
+              ) : trimProposal ? (
+                <TrimReviewPanel
+                  proposal={trimProposal}
+                  onApply={handleApplyTrim}
+                  onClose={() => setTrimProposal(null)}
+                  onSendToChat={(msg) => {
+                    setTrimProposal(null)
+                    setIsChatOpen(true)
+                    setTimeout(() => chat.sendMessage(msg), 50)
+                  }}
+                />
               ) : (
                 <ChatPanel
                   onClose={() => setIsChatOpen(false)}
@@ -797,7 +937,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
         <div className="lg:hidden h-px bg-zinc-200 dark:bg-latex-border shrink-0" />
 
         {/* Right: PDF Preview or Version History */}
-        <div className={`${isChatOpen || showReview ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200 relative`}>
+        <div className={`${isChatOpen || showReview || !!trimProposal ? 'lg:w-[32%]' : 'lg:w-1/2'} h-1/2 lg:h-full flex flex-col bg-white min-w-0 transition-all duration-200 relative`}>
           {/* Overflow banner */}
           {pdfPageCount > 1 && !overflowDismissed && !showHistory && (
             <OverflowBanner
@@ -920,6 +1060,16 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
           </div>
         </div>
       )}
+
+      {/* Template picker modal */}
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          currentSource={latexSource}
+          onApply={handleApplyTemplate}
+          onClose={() => setShowTemplatePicker(false)}
+        />
+      )}
+
     </div>
   )
 }
