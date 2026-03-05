@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { fetchWithKey } from '@/lib/fetch'
+import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 
 const CHAT_STORAGE_KEY = 'resulyze-chat-history'
 
@@ -136,6 +137,12 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
 
       if (replacementWorked) {
         onApplyChanges(replaced)
+        trackAnalyticsEvent('optimization_applied', {
+          source: 'chat',
+          company: jobData?.company,
+          jobTitle: jobData?.jobTitle,
+          changes: [msg.content.slice(0, 300)],
+        })
         // Mark only this change as applied
         return prev.map(m => {
           if (m.id !== messageId) return m
@@ -155,6 +162,12 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
       // Replacement failed (abbreviated snippet didn't match) — fall back to proposedLatex
       if (msg.proposedLatex) {
         onApplyChanges(msg.proposedLatex)
+        trackAnalyticsEvent('optimization_applied', {
+          source: 'chat',
+          company: jobData?.company,
+          jobTitle: jobData?.jobTitle,
+          changes: [msg.content.slice(0, 300)],
+        })
         // Mark ALL pending changes as applied since proposedLatex contains all of them
         return prev.map(m => {
           if (m.id !== messageId) return m
@@ -181,7 +194,7 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
         }
       })
     })
-  }, [onApplyChanges])
+  }, [onApplyChanges, jobData])
 
   const dismissChange = useCallback((messageId: string, changeIndex: number) => {
     setMessages(prev => prev.map(m => {
@@ -219,6 +232,13 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
         onApplyChanges(currentLatex)
       }
 
+      trackAnalyticsEvent('optimization_applied', {
+        source: 'chat',
+        company: jobData?.company,
+        jobTitle: jobData?.jobTitle,
+        changes: [msg.content.slice(0, 300)],
+      })
+
       return prev.map(m =>
         m.id === messageId ? {
           ...m,
@@ -227,7 +247,7 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
         } : m
       )
     })
-  }, [onApplyChanges])
+  }, [onApplyChanges, jobData])
 
   const dismissProposal = useCallback((messageId: string) => {
     setMessages(prev =>

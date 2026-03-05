@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { RotateCw, Download, Loader2, AlertCircle, ZoomIn, ZoomOut, ScanText } from 'lucide-react'
+import { RotateCw, Download, Loader2, AlertCircle, ZoomIn, ZoomOut, ScanText, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react'
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174'
 
@@ -14,9 +14,11 @@ interface PreviewPanelProps {
   onPageCount?: (count: number) => void
   // ATS
   atsScore?: number | null
+  atsPreviousScore?: number | null
   isAtsAnalyzing?: boolean
   showAts?: boolean
   onToggleAts?: () => void
+  onReanalyzeAts?: () => void
 }
 
 // Load pdf.js from CDN once
@@ -105,7 +107,7 @@ async function renderPage(
   }
 }
 
-export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload, onPageCount, atsScore, isAtsAnalyzing, showAts, onToggleAts }: PreviewPanelProps) {
+export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, onDownload, onPageCount, atsScore, atsPreviousScore, isAtsAnalyzing, showAts, onToggleAts, onReanalyzeAts }: PreviewPanelProps) {
   const [scale, setScale] = useState(1)
   const [numPages, setNumPages] = useState(0)
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -230,72 +232,106 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
           </button>
 
           {/* ATS Score — split-pill diagnostic readout */}
-          {onToggleAts && (
-            <button
-              onClick={onToggleAts}
-              title="ATS compatibility score — analyzes the compiled PDF"
-              className={`group flex items-stretch h-7 rounded-md overflow-hidden border transition-all duration-200 whitespace-nowrap
-                ${atsScore == null
-                  ? showAts
-                    ? 'border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-white/10'
-                    : 'border-zinc-200 dark:border-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-600'
-                  : atsScore >= 85
-                    ? showAts
-                      ? 'border-emerald-400 dark:border-emerald-500/60 bg-emerald-50 dark:bg-emerald-500/10'
-                      : 'border-emerald-200 dark:border-emerald-500/30 hover:border-emerald-400 dark:hover:border-emerald-500/60'
-                    : atsScore >= 60
-                    ? showAts
-                      ? 'border-amber-400 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-500/10'
-                      : 'border-amber-200 dark:border-amber-500/30 hover:border-amber-400 dark:hover:border-amber-500/60'
-                    : showAts
-                      ? 'border-red-400 dark:border-red-500/60 bg-red-50 dark:bg-red-500/10'
-                      : 'border-red-200 dark:border-red-500/30 hover:border-red-400 dark:hover:border-red-500/60'
-                }
-              `}
-            >
-              {/* Label section */}
-              <div className="flex items-center gap-1 px-2 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
-                <ScanText className="w-3 h-3 shrink-0" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider">ATS</span>
-              </div>
+          {onToggleAts && (() => {
+            const displayScore = isAtsAnalyzing ? null : atsScore
+            const scoreDelta = (atsScore != null && atsPreviousScore != null && !isAtsAnalyzing)
+              ? atsScore - atsPreviousScore
+              : null
+            const chipColor = displayScore == null
+              ? showAts
+                ? 'border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-white/10'
+                : 'border-zinc-200 dark:border-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-600'
+              : displayScore >= 85
+                ? showAts
+                  ? 'border-emerald-400 dark:border-emerald-500/60 bg-emerald-50 dark:bg-emerald-500/10'
+                  : 'border-emerald-200 dark:border-emerald-500/30 hover:border-emerald-400 dark:hover:border-emerald-500/60'
+                : displayScore >= 60
+                ? showAts
+                  ? 'border-amber-400 dark:border-amber-500/60 bg-amber-50 dark:bg-amber-500/10'
+                  : 'border-amber-200 dark:border-amber-500/30 hover:border-amber-400 dark:hover:border-amber-500/60'
+                : showAts
+                  ? 'border-red-400 dark:border-red-500/60 bg-red-50 dark:bg-red-500/10'
+                  : 'border-red-200 dark:border-red-500/30 hover:border-red-400 dark:hover:border-red-500/60'
+            const dividerColor = displayScore == null
+              ? 'bg-zinc-200 dark:bg-zinc-700/70'
+              : displayScore >= 85
+              ? 'bg-emerald-200 dark:bg-emerald-500/30'
+              : displayScore >= 60
+              ? 'bg-amber-200 dark:bg-amber-500/30'
+              : 'bg-red-200 dark:bg-red-500/30'
+            const scoreTextColor = displayScore == null
+              ? 'text-zinc-400 dark:text-zinc-500'
+              : displayScore >= 85
+              ? 'text-emerald-700 dark:text-emerald-300'
+              : displayScore >= 60
+              ? 'text-amber-700 dark:text-amber-300'
+              : 'text-red-700 dark:text-red-300'
 
-              {/* Divider */}
-              <div className={`w-px self-stretch transition-colors
-                ${atsScore == null
-                  ? 'bg-zinc-200 dark:bg-zinc-700/70'
-                  : atsScore >= 85
-                  ? 'bg-emerald-200 dark:bg-emerald-500/30'
-                  : atsScore >= 60
-                  ? 'bg-amber-200 dark:bg-amber-500/30'
-                  : 'bg-red-200 dark:bg-red-500/30'
-                }
-              `} />
+            return (
+              <div className="flex items-stretch h-7">
+                <button
+                  onClick={onToggleAts}
+                  title="ATS compatibility score — analyzes the compiled PDF"
+                  className={`group flex items-stretch ${atsScore != null && !isAtsAnalyzing ? 'rounded-l-md border-r-0' : 'rounded-md'} overflow-hidden border transition-all duration-200 whitespace-nowrap ${chipColor}`}
+                >
+                  {/* Label section */}
+                  <div className="flex items-center gap-1 px-2 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors">
+                    <ScanText className="w-3 h-3 shrink-0" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider">ATS</span>
+                  </div>
 
-              {/* Score section */}
-              <div className={`flex items-center justify-center px-2 min-w-[2rem] transition-colors
-                ${atsScore == null
-                  ? 'text-zinc-400 dark:text-zinc-500'
-                  : atsScore >= 85
-                  ? 'text-emerald-700 dark:text-emerald-300'
-                  : atsScore >= 60
-                  ? 'text-amber-700 dark:text-amber-300'
-                  : 'text-red-700 dark:text-red-300'
-                }
-              `}>
-                {isAtsAnalyzing && atsScore == null ? (
-                  <span className="flex gap-[2px] items-center">
-                    <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-bold tabular-nums leading-none">
-                    {atsScore ?? '—'}
-                  </span>
+                  {/* Divider */}
+                  <div className={`w-px self-stretch transition-colors ${dividerColor}`} />
+
+                  {/* Score section */}
+                  <div className={`flex items-center justify-center gap-1 px-2 min-w-[2rem] transition-colors ${scoreTextColor}`}>
+                    {isAtsAnalyzing ? (
+                      <span className="flex items-center gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-1 h-1 rounded-full bg-current animate-bounce" />
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-[11px] font-bold tabular-nums leading-none">
+                          {atsScore ?? '—'}
+                        </span>
+                        {scoreDelta != null && scoreDelta !== 0 && (
+                          scoreDelta > 0 ? (
+                            <TrendingUp className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 text-red-500 dark:text-red-400" />
+                          )
+                        )}
+                      </>
+                    )}
+                  </div>
+                </button>
+
+                {/* Reload button — only visible when we have a score */}
+                {atsScore != null && !isAtsAnalyzing && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onReanalyzeAts?.() }}
+                    disabled={!pdfUrl}
+                    title="Re-analyze ATS score"
+                    className={`flex items-center justify-center px-1.5 border rounded-r-md transition-all duration-200
+                      ${displayScore == null
+                        ? 'border-zinc-200 dark:border-zinc-700/70 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        : displayScore >= 85
+                        ? 'border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                        : displayScore >= 60
+                        ? 'border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+                        : 'border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+                      }
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                    `}
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </button>
                 )}
               </div>
-            </button>
-          )}
+            )
+          })()}
         </div>
 
         {/* Zoom controls + download */}

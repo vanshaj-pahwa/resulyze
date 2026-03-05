@@ -154,7 +154,11 @@ export async function POST(request: NextRequest) {
 
     const minChanges = Math.max(3, Math.min(8, Math.ceil(items.length * 0.25)))
 
-    const prompt = `You are an expert resume editor. This resume is ${pageCount || 2} pages and MUST fit on ONE page.
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+    const prompt = `Today's date is ${today}. Use this when evaluating whether dates are past or future.
+
+You are an expert resume editor. This resume is ${pageCount || 2} pages and MUST fit on ONE page.
 
 ${getFullResumeKnowledge()}
 ${jobContext}

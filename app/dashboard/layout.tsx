@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { FileText, Code2, PenSquare, Zap } from 'lucide-react'
+import { LayoutDashboard, FileText, Code2, PenSquare, Zap } from 'lucide-react'
 import ConnectionStatus from '@/components/ui/connection-status'
 import { StepsGuide } from '@/components/ui/steps-guide'
 import { useApiKey } from '@/hooks/useApiKey'
 import { ApiKeyDialog } from '@/components/ui/api-key-dialog'
 
 const TABS = [
+  { id: 'home', path: '/dashboard', shortTitle: 'Home', icon: LayoutDashboard },
   { id: 'job-analysis', path: '/dashboard/job-analysis', shortTitle: 'Job Analysis', icon: FileText },
   { id: 'resume', path: '/dashboard/resume', shortTitle: 'Resume', icon: Code2 },
   { id: 'cover-letter', path: '/dashboard/cover-letter', shortTitle: 'Cover Letter', icon: PenSquare },
@@ -28,7 +29,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [mounted, isKeySet])
 
   const isActive = (tab: typeof TABS[0]) => {
-    return pathname === tab.path || (pathname === '/dashboard' && tab.id === 'job-analysis')
+    if (tab.id === 'home') return pathname === '/dashboard'
+    return pathname === tab.path
   }
 
   return (

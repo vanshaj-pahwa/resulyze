@@ -29,12 +29,15 @@ export async function POST(request: NextRequest) {
     );
 
     const resumeRules = getCondensedResumeKnowledge()
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     let prompt = ""
 
     // Choose prompt based on optimization mode
     switch(optimizationMode) {
       case "checklist":
         prompt = `
+        Today's date is ${today}. Use this when evaluating whether dates are past or future.
+
         You are an expert resume optimizer who follows these resume writing rules:
 
         ${resumeRules}
@@ -66,6 +69,8 @@ export async function POST(request: NextRequest) {
 
       case "skills":
         prompt = `
+        Today's date is ${today}. Use this when evaluating whether dates are past or future.
+
         You are an expert resume optimizer who follows these resume writing rules:
 
         ${resumeRules}
@@ -97,6 +102,8 @@ export async function POST(request: NextRequest) {
 
       default: // general optimization
         prompt = `
+        Today's date is ${today}. Use this when evaluating whether dates are past or future.
+
         You are an expert resume optimizer who follows these resume writing rules:
 
         ${resumeRules}

@@ -35,7 +35,11 @@ export async function POST(request: NextRequest) {
         ].join('\n')
       : ''
 
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
     const prompt = [
+      `Today's date is ${today}. Use this when evaluating whether dates in the resume are past or future.`,
+      '',
       'You are an expert resume reviewer. Use these resume writing rules as your SCORING RUBRIC:',
       '',
       getFullResumeKnowledge(),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchWithKey } from '@/lib/fetch'
 import type { AtsAnalysis } from '@/lib/latex/ats-analyzer'
 
@@ -8,6 +8,8 @@ export interface UseAtsScoreResult {
   analysis: AtsAnalysis | null
   isAnalyzing: boolean
   error: string | null
+  previousScore: number | null
+  reanalyze: () => void
 }
 
 /** Convert a blob: URL to a base64 string (chunked to avoid stack overflow on large PDFs). */
@@ -31,6 +33,8 @@ export function useAtsScore(pdfBlobUrl: string | null, jobKeywords: string[] = [
   const [analysis, setAnalysis] = useState<AtsAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [previousScore, setPreviousScore] = useState<number | null>(null)
+  const [retrigger, setRetrigger] = useState(0)
   const abortRef = useRef<AbortController>()
   const keywordsRef = useRef(jobKeywords)
   keywordsRef.current = jobKeywords
@@ -38,16 +42,13 @@ export function useAtsScore(pdfBlobUrl: string | null, jobKeywords: string[] = [
   // Stringify dep so new array refs with same content don't re-trigger
   const keywordsKey = JSON.stringify(jobKeywords)
 
-  useEffect(() => {
-    if (!pdfBlobUrl) {
-      abortRef.current?.abort()
-      setAnalysis(null)
-      setIsAnalyzing(false)
-      setError(null)
-      return
-    }
+  const runAnalysis = useCallback((blobUrl: string) => {
+    // Save current score as previous before clearing
+    setAnalysis(prev => {
+      if (prev?.score != null) setPreviousScore(prev.score)
+      return null // clear old analysis immediately
+    })
 
-    // Abort any in-flight request from a previous PDF
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
@@ -57,7 +58,7 @@ export function useAtsScore(pdfBlobUrl: string | null, jobKeywords: string[] = [
 
     ;(async () => {
       try {
-        const pdfBase64 = await blobUrlToBase64(pdfBlobUrl)
+        const pdfBase64 = await blobUrlToBase64(blobUrl)
 
         if (controller.signal.aborted) return
 
@@ -87,11 +88,27 @@ export function useAtsScore(pdfBlobUrl: string | null, jobKeywords: string[] = [
       }
     })()
 
-    return () => {
-      abortRef.current?.abort()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pdfBlobUrl, keywordsKey])
+    return () => { abortRef.current?.abort() }
+  }, [])
 
-  return { analysis, isAnalyzing, error }
+  useEffect(() => {
+    if (!pdfBlobUrl) {
+      abortRef.current?.abort()
+      setAnalysis(null)
+      setIsAnalyzing(false)
+      setError(null)
+      setPreviousScore(null)
+      return
+    }
+
+    const cleanup = runAnalysis(pdfBlobUrl)
+    return cleanup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfBlobUrl, keywordsKey, retrigger])
+
+  const reanalyze = useCallback(() => {
+    if (pdfBlobUrl) setRetrigger(n => n + 1)
+  }, [pdfBlobUrl])
+
+  return { analysis, isAnalyzing, error, previousScore, reanalyze }
 }

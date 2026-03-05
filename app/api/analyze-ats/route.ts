@@ -26,9 +26,12 @@ export async function POST(request: NextRequest) {
 
     const hasJd = jobKeywords.length > 0
 
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
     const prompt = [
       'You are a strict ATS (Applicant Tracking System) compatibility auditor analyzing a compiled resume PDF.',
       'You are seeing exactly what ATS bots see when they parse this resume.',
+      `Today's date is ${today}. Use this to determine whether dates in the resume are in the past or future.`,
       'Your scores must be REALISTIC and CONSERVATIVE. Most real resumes score between 55 and 75.',
       'A score above 85 requires near-perfect ATS optimization across every dimension.',
       '',

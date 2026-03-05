@@ -23,7 +23,11 @@ export async function POST(request: NextRequest) {
     const resumeContent = resumeData.latexSource
       || (resumeData.workExperience ? JSON.stringify(resumeData, null, 2) : 'No resume data provided')
 
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
     const prompt = `
+    Today's date is ${today}.
+
     You are an expert cover letter writer with deep resume knowledge:
 
     ${getCondensedResumeKnowledge()}

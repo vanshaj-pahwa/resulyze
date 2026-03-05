@@ -130,9 +130,13 @@ export async function POST(request: NextRequest) {
         .join(', ');
     }
 
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
     // Create appropriate prompt based on whether this is for a specific round
     let promptText = isRoundSpecific 
-      ? `Generate interview questions for a candidate preparing for the "${actualRoundName}" interview round at ${company}.
+      ? `Today's date is ${today}.
+
+Generate interview questions for a candidate preparing for the "${actualRoundName}" interview round at ${company}.
         
 Job Information:
 - Job Title: ${jobTitle}
@@ -163,7 +167,9 @@ FORMATTING INSTRUCTIONS:
 2. Use **bold text** for important concepts, keywords, and section headings
 3. Use bullet points or numbered lists for multi-part questions
 4. For questions about code, include well-formatted code examples with proper markdown syntax highlighting where appropriate`
-      : `Generate comprehensive interview questions for a candidate based on their resume and the job they're applying for.
+      : `Today's date is ${today}.
+
+Generate comprehensive interview questions for a candidate based on their resume and the job they're applying for.
 
 Job Information:
 - Job Title: ${jobTitle}

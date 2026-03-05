@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
 import { useChatLatex } from '@/hooks/useChatLatex'
+import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 import { useResumeVersions } from '@/hooks/useResumeVersions'
 import { useResumeReview } from '@/hooks/useResumeReview'
 import { useAtsScore } from '@/hooks/useAtsScore'
@@ -125,7 +126,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [JSON.stringify(jobData?.skills), JSON.stringify(jobData?.keywords)]
   )
-  const { analysis: atsAnalysis, isAnalyzing: isAtsAnalyzing, error: atsError } = useAtsScore(pdfBlobUrl, atsKeywords)
+  const { analysis: atsAnalysis, isAnalyzing: isAtsAnalyzing, error: atsError, previousScore: atsPreviousScore, reanalyze: reanalyzeAts } = useAtsScore(pdfBlobUrl, atsKeywords)
 
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -301,6 +302,12 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
         setShowChangesPanel(true)
         setPendingCompile(true) // auto-compile with optimized LaTeX
         toast.success(`Resume optimized! ${data.changes?.length || 0} changes made.`)
+        trackAnalyticsEvent('optimization_applied', {
+          source: 'auto',
+          company: jobData?.company,
+          jobTitle: jobData?.jobTitle,
+          changes: (data.changes || []).slice(0, 10),
+        })
       } else {
         toast.info('No changes needed — your resume already matches well.')
         setPreviousLatex(null)
@@ -366,6 +373,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
       setLatexSource(converted)
       setPendingCompile(true)
       toast.success(`Switched to "${template.name}" — your content was preserved`)
+      trackAnalyticsEvent('resume_created', { template: template.name })
     } catch (err: any) {
       toast.error(err.message || 'Failed to switch template. Please try again.')
     } finally {
@@ -960,6 +968,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               analysis={atsAnalysis}
               isAnalyzing={isAtsAnalyzing}
               error={atsError}
+              previousScore={atsPreviousScore}
               onClose={() => setShowAts(false)}
               onSendToChat={(msg) => {
                 setShowAts(false)
@@ -976,9 +985,11 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
               onDownload={handleDownload}
               onPageCount={handlePageCount}
               atsScore={atsAnalysis?.score ?? null}
+              atsPreviousScore={atsPreviousScore}
               isAtsAnalyzing={isAtsAnalyzing}
               showAts={showAts}
               onToggleAts={() => setShowAts(prev => !prev)}
+              onReanalyzeAts={reanalyzeAts}
             />
           )}
         </div>

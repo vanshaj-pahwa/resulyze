@@ -12,6 +12,7 @@ import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import 'highlight.js/styles/github-dark.css' // Import a code highlighting theme
 import InlineJobForm from '@/components/shared/InlineJobForm'
+import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 
 interface InterviewPrepProps {
   readonly jobData: any
@@ -186,6 +187,7 @@ export default function InterviewPrep({ jobData, resumeData }: Readonly<Intervie
         showAnswer: false
       }))
       setQuestions(questionsWithAnswerProps)
+      trackAnalyticsEvent('interview_prepped', { company: effectiveJobData?.company, jobTitle: effectiveJobData?.jobTitle })
     } catch (error) {
       console.error('Error generating interview questions:', error)
       alert(`Failed to generate questions: ${error instanceof Error ? error.message : 'Unknown error'}`)

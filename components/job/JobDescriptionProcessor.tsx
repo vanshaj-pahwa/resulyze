@@ -10,6 +10,7 @@ import { Loader2, Upload, FileText, Link as LinkIcon, RotateCcw, Clock, Trash2, 
 import { Input } from '@/components/ui/input'
 import { fetchWithKey } from '@/lib/fetch'
 import type { JdHistoryEntry } from '@/hooks/useJdHistory'
+import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 
 interface JobDescriptionProcessorProps {
   readonly onJobDataExtracted: (data: any) => void
@@ -152,6 +153,7 @@ export default function JobDescriptionProcessor({
       }
       setExtractedData(data)
       onJobDataExtracted(data)
+      trackAnalyticsEvent('jd_analyzed', { skills: data.skills || [], company: data.company, jobTitle: data.jobTitle })
     } catch (error) {
       console.error('Error processing job description:', error)
     } finally {

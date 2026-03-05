@@ -79,7 +79,7 @@ A resume can only do so much without genuine, relevant experience behind it.
 1. Education > Projects > Volunteer Experience / Extracurriculars > Skills
 
 ### Rules:
-- Do NOT include a summary/profile unless: senior/staff engineer+, career changer, or addressing an employment gap.
+- A summary/profile is optional. It is most impactful for senior/staff engineers, career changers, or candidates addressing an employment gap. For others, it can still be included — if present, it should be a sharp 2–3 line professional summary that hooks a recruiter in under 10 seconds. Never remove a profile section without the user's explicit permission — instead, advise on whether to keep or remove it and explain the trade-off.
 - Do NOT include a references section.
 
 ---

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import {
   X, ScanText, AlertTriangle, Info, CheckCircle2, Loader2,
   ChevronDown, ChevronRight, MessageSquare, Tag, Layout, FileText, List,
+  TrendingUp, TrendingDown,
 } from 'lucide-react'
 import type { AtsAnalysis, AtsSuggestion, AtsCategory } from '@/lib/latex/ats-analyzer'
 
@@ -11,6 +12,7 @@ interface AtsScorePanelProps {
   analysis: AtsAnalysis | null
   isAnalyzing: boolean
   error: string | null
+  previousScore?: number | null
   onClose: () => void
   onSendToChat?: (message: string) => void
 }
@@ -174,11 +176,16 @@ export default function AtsScorePanel({
   analysis,
   isAnalyzing,
   error,
+  previousScore,
   onClose,
   onSendToChat,
 }: AtsScorePanelProps) {
   const totalKeywords =
     (analysis?.matchedKeywords?.length ?? 0) + (analysis?.missingKeywords?.length ?? 0)
+
+  const scoreDelta = (analysis?.score != null && previousScore != null)
+    ? analysis.score - previousScore
+    : null
 
   // Group suggestions by category for inline display
   const byCategory = (cat: AtsCategory): AtsSuggestion[] =>
@@ -214,15 +221,20 @@ export default function AtsScorePanel({
       {/* ── Content ────────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar">
 
-        {/* Loading skeleton */}
-        {isAnalyzing && !analysis && (
+        {/* Loading skeleton — shown whenever analyzing, including re-analysis */}
+        {isAnalyzing && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 animate-pulse">
-              <div className="h-10 w-14 bg-zinc-200 dark:bg-zinc-700 rounded-lg" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-20 bg-zinc-200 dark:bg-zinc-700 rounded" />
-                <div className="h-2 w-14 bg-zinc-100 dark:bg-zinc-800 rounded" />
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-blue-100 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5">
+              <Loader2 className="w-8 h-8 text-blue-500 dark:text-blue-400 animate-spin shrink-0" />
+              <div className="flex-1">
+                <p className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-200">Analyzing PDF…</p>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">Scanning what ATS bots see</p>
               </div>
+              {previousScore != null && (
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0">
+                  Previous: {previousScore}
+                </span>
+              )}
             </div>
             <SkeletonBar /><SkeletonBar /><SkeletonBar /><SkeletonBar />
           </div>
@@ -250,21 +262,31 @@ export default function AtsScorePanel({
 
 
         {/* Results */}
-        {analysis && (
+        {analysis && !isAnalyzing && (
           <>
             {/* ── Overall score badge ─────────────────────────────────────── */}
             <div className={`flex items-center gap-3 p-3 rounded-xl border ${overallBg(analysis.score)}`}>
-              <span className={`text-4xl font-bold tabular-nums font-heading ${scoreColor(analysis.score, 100)}`}>
-                {analysis.score}
-              </span>
+              <div className="flex flex-col items-center">
+                <span className={`text-4xl font-bold tabular-nums font-heading ${scoreColor(analysis.score, 100)}`}>
+                  {analysis.score}
+                </span>
+                {scoreDelta != null && scoreDelta !== 0 && (
+                  <span className={`flex items-center gap-0.5 text-[10px] font-semibold mt-0.5 ${scoreDelta > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {scoreDelta > 0 ? (
+                      <><TrendingUp className="w-3 h-3" />+{scoreDelta}</>
+                    ) : (
+                      <><TrendingDown className="w-3 h-3" />{scoreDelta}</>
+                    )}
+                  </span>
+                )}
+              </div>
               <div className="flex-1">
                 <div className={`text-[12px] font-semibold ${overallLabel(analysis.score).color}`}>
                   {overallLabel(analysis.score).text}
                 </div>
                 <div className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">out of 100</div>
               </div>
-              {isAnalyzing && <Loader2 className="w-4 h-4 text-zinc-400 animate-spin shrink-0" />}
-              {!isAnalyzing && analysis.score >= 85 && (
+              {analysis.score >= 85 && (
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400 shrink-0" />
               )}
             </div>

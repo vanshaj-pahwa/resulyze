@@ -11,6 +11,7 @@ import { Loader2, Copy, Download, Mail, AlertCircle, FileDown } from 'lucide-rea
 import { fetchWithKey } from '@/lib/fetch'
 import { jsPDF } from 'jspdf'
 import InlineJobForm from '@/components/shared/InlineJobForm'
+import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 
 interface CoverLetterGeneratorProps {
   readonly jobData: any
@@ -66,6 +67,7 @@ export default function CoverLetterGenerator({ jobData, resumeData }: Readonly<C
 
       const data = await response.json()
       setCoverLetter(data.coverLetter)
+      trackAnalyticsEvent('cover_letter_generated', { company: effectiveJobData?.company, jobTitle: effectiveJobData?.jobTitle })
     } catch (error) {
       console.error('Error generating cover letter:', error)
     } finally {
