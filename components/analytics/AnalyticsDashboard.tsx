@@ -3,12 +3,13 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatRelativeTime } from '@/lib/utils'
 import { FileText, PenSquare, Zap, Wrench, Trash2, Cloud, Clock, Activity, ArrowRight, Search } from 'lucide-react'
 import { useAnalytics, type AnalyticsEvent } from '@/hooks/useAnalytics'
 
 // ─── Quick Actions (with integrated stat counts) ─────────────────────────────
 
-function QuickActions({ stats }: { stats: { resumesCreated: number; coverLetters: number; interviewsPrepped: number; optimizationsApplied: number; jdsAnalyzed: number } }) {
+export function QuickActions({ stats }: { stats: { resumesCreated: number; coverLetters: number; interviewsPrepped: number; optimizationsApplied: number; jdsAnalyzed: number } }) {
   const actions = [
     { label: 'Job Analysis', href: '/dashboard/job-analysis', icon: Search, description: 'Extract skills & requirements', count: stats.jdsAnalyzed, countLabel: 'analyzed', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50/80 dark:bg-blue-950/20', hoverBg: 'hover:bg-blue-100 dark:hover:bg-blue-950/40', border: 'border-blue-200/60 dark:border-blue-800/30', badge: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' },
     { label: 'Resume Editor', href: '/dashboard/resume', icon: FileText, description: 'LaTeX editor with AI assistant', count: stats.resumesCreated, countLabel: 'created', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/80 dark:bg-emerald-950/20', hoverBg: 'hover:bg-emerald-100 dark:hover:bg-emerald-950/40', border: 'border-emerald-200/60 dark:border-emerald-800/30', badge: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' },
@@ -50,7 +51,7 @@ function OptimizationStat({ count }: { count: number }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/30">
       <Wrench className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-      <span className="text-xs text-zinc-600 dark:text-zinc-400">
+      <span className="text-xs text-zinc-700 dark:text-zinc-300">
         <span className="font-semibold text-zinc-800 dark:text-zinc-200">{count}</span> optimization{count !== 1 ? 's' : ''} applied
       </span>
     </div>
@@ -92,38 +93,26 @@ function SkillCloud({ skillFrequencies, jdCount }: { skillFrequencies: Map<strin
 
   const isFlat = skills.length > 0 && skills[0].fontSize === 0
 
-  if (skills.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="p-4 pb-2">
-          <div className="flex items-center gap-2">
-            <Cloud className="w-3.5 h-3.5 text-zinc-400" />
-            <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Skill Cloud</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 pt-1">
-          <div className="text-center py-5">
-            <p className="text-[11px] text-zinc-400 dark:text-zinc-600 mb-2">See which skills are most in-demand across JDs.</p>
-            <Link href="/dashboard/job-analysis" className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-medium">
-              Analyze your first JD <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center gap-2">
-          <Cloud className="w-3.5 h-3.5 text-zinc-400" />
-          <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Skill Cloud</CardTitle>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-600 ml-auto">{skills.length} skills &middot; {jdCount} JD{jdCount !== 1 ? 's' : ''}</span>
+          <Cloud className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+          <CardTitle className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Skill Cloud</CardTitle>
+          {skills.length > 0 && (
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-500 ml-auto">{skills.length} skills &middot; {jdCount} JD{jdCount !== 1 ? 's' : ''}</span>
+          )}
         </div>
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 ml-[22px]">Most in-demand skills across your analyzed JDs</p>
       </CardHeader>
       <CardContent className="p-4 pt-1">
-        {isFlat ? (
+        {skills.length === 0 ? (
+          <div className="text-center py-4">
+            <Link href="/dashboard/job-analysis" className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Analyze your first JD <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        ) : isFlat ? (
           // Badge/pill display when all skills have equal frequency
           <div className="flex flex-wrap gap-1.5 py-1">
             {skills.map(({ skill, colorClass }) => (
@@ -160,39 +149,28 @@ function SkillCloud({ skillFrequencies, jdCount }: { skillFrequencies: Map<strin
 function OptimizationTimeline({ history }: { history: AnalyticsEvent[] }) {
   const items = history.slice(0, 50)
 
-  if (items.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="p-4 pb-2">
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-zinc-400" />
-            <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Optimization History</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 pt-1">
-          <div className="text-center py-5">
-            <p className="text-[11px] text-zinc-400 dark:text-zinc-600 mb-2">Your applied AI suggestions will appear here.</p>
-            <Link href="/dashboard/resume" className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-medium">
-              Open resume editor <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <Card>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center gap-2">
-          <Clock className="w-3.5 h-3.5 text-zinc-400" />
-          <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Optimization History</CardTitle>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-600 ml-auto">{history.length} total</span>
+          <Clock className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+          <CardTitle className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Optimization History</CardTitle>
+          {items.length > 0 && (
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-500 ml-auto">{history.length} total</span>
+          )}
         </div>
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 ml-[22px]">Applied AI suggestions and improvements</p>
       </CardHeader>
       <CardContent className="p-4 pt-1">
+        {items.length === 0 ? (
+          <div className="text-center py-4">
+            <Link href="/dashboard/resume" className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              Open resume editor <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        ) : (
         <div className="space-y-0 relative">
-          <div className="absolute left-[5px] top-2 bottom-2 w-px bg-zinc-200 dark:bg-zinc-700/50" />
+          <div className="absolute left-[5px] top-2 bottom-2 w-px bg-zinc-300 dark:bg-zinc-600" />
           {items.map((event) => {
             const meta = event.metadata || {}
             const isChat = meta.source === 'chat'
@@ -216,7 +194,7 @@ function OptimizationTimeline({ history }: { history: AnalyticsEvent[] }) {
                         {jobLabel}
                       </span>
                     )}
-                    <span className="text-[10px] text-zinc-400 dark:text-zinc-600 ml-auto shrink-0">
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-500 ml-auto shrink-0">
                       {formatRelativeTime(event.timestamp)}
                     </span>
                   </div>
@@ -224,12 +202,12 @@ function OptimizationTimeline({ history }: { history: AnalyticsEvent[] }) {
                   {changes.length > 0 && (
                     <ul className="mt-1 space-y-px">
                       {changes.slice(0, 5).map((desc, i) => (
-                        <li key={i} className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-snug truncate pl-1.5 border-l border-zinc-200 dark:border-zinc-700/50">
+                        <li key={i} className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-snug truncate pl-1.5 border-l border-zinc-300 dark:border-zinc-600">
                           {desc}
                         </li>
                       ))}
                       {changes.length > 5 && (
-                        <li className="text-[10px] text-zinc-400 dark:text-zinc-600 pl-1.5">
+                        <li className="text-[10px] text-zinc-500 dark:text-zinc-500 pl-1.5">
                           +{changes.length - 5} more
                         </li>
                       )}
@@ -240,6 +218,7 @@ function OptimizationTimeline({ history }: { history: AnalyticsEvent[] }) {
             )
           })}
         </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -277,15 +256,15 @@ function ActivityFeed({ events }: { events: AnalyticsEvent[] }) {
     <Card>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center gap-2">
-          <Activity className="w-3.5 h-3.5 text-zinc-400" />
-          <CardTitle className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Recent Activity</CardTitle>
+          <Activity className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+          <CardTitle className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Recent Activity</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-1">
         <div className="space-y-3">
           {grouped.map((group) => (
             <div key={group.date}>
-              <p className="text-[10px] font-medium text-zinc-400 dark:text-zinc-600 uppercase tracking-wider mb-1">{group.date}</p>
+              <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-1">{group.date}</p>
               <div className="space-y-1">
                 {group.items.map((event) => {
                   const info = EVENT_LABELS[event.type] || { label: event.type, color: 'bg-zinc-400' }
@@ -304,11 +283,11 @@ function ActivityFeed({ events }: { events: AnalyticsEvent[] }) {
                       <div className={`w-1.5 h-1.5 rounded-full ${info.color} shrink-0 mt-1.5`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
-                          <span className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">
+                          <span className="text-[11px] text-zinc-700 dark:text-zinc-300 truncate">
                             {sourceLabel}
-                            {jobContext && <span className="text-zinc-400 dark:text-zinc-500"> &mdash; {jobContext}</span>}
+                            {jobContext && <span className="text-zinc-500 dark:text-zinc-400"> &mdash; {jobContext}</span>}
                           </span>
-                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600 shrink-0 tabular-nums ml-auto">
+                          <span className="text-[10px] text-zinc-500 dark:text-zinc-500 shrink-0 tabular-nums ml-auto">
                             {new Date(event.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                           </span>
                         </div>
@@ -330,20 +309,6 @@ function ActivityFeed({ events }: { events: AnalyticsEvent[] }) {
   )
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatRelativeTime(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 
 export default function AnalyticsDashboard() {
@@ -351,40 +316,25 @@ export default function AnalyticsDashboard() {
   const hasActivity = events.length > 0
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5">
-            {hasActivity ? 'Your resume-building activity at a glance.' : 'Get started by picking an action below.'}
-          </p>
-        </div>
-        {hasActivity && (
+    <div className="space-y-3">
+      {hasActivity && (
+        <div className="flex items-center justify-end">
           <button
             onClick={clearAnalytics}
-            className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-red-500 dark:text-zinc-600 dark:hover:text-red-400 transition-colors"
+            className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-red-500 dark:text-zinc-400 dark:hover:text-red-400 transition-colors"
           >
             <Trash2 className="w-3 h-3" />
             Clear
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Quick Actions with integrated counts */}
-      <QuickActions stats={stats} />
-
-      {/* Optimization stat (compact inline) */}
       <OptimizationStat count={stats.optimizationsApplied} />
-
-      {/* Skill Cloud + Optimization Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <SkillCloud skillFrequencies={skillFrequencies} jdCount={stats.jdsAnalyzed} />
-        <OptimizationTimeline history={optimizationHistory} />
-      </div>
-
-      {/* Activity Feed */}
+      <SkillCloud skillFrequencies={skillFrequencies} jdCount={stats.jdsAnalyzed} />
+      <OptimizationTimeline history={optimizationHistory} />
       <ActivityFeed events={events} />
     </div>
   )
 }
+
+export { useAnalytics }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { generateId } from '@/lib/utils'
 
-const STORAGE_KEY = 'resulyze-resume-versions'
 const MAX_VERSIONS = 20
 
 export interface ResumeVersion {
@@ -13,28 +13,32 @@ export interface ResumeVersion {
   label: string
 }
 
-export function useResumeVersions() {
+export function useResumeVersions(resumeId: string | null) {
   const [versions, setVersions] = useState<ResumeVersion[]>([])
+  const storageKey = resumeId ? `resulyze-versions-${resumeId}` : null
 
   useEffect(() => {
+    if (!storageKey) {
+      setVersions([])
+      return
+    }
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
+      const saved = localStorage.getItem(storageKey)
       if (saved) {
         setVersions(JSON.parse(saved))
+      } else {
+        setVersions([])
       }
     } catch {
-      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(storageKey)
+      setVersions([])
     }
-  }, [])
-
-  const persist = useCallback((updated: ResumeVersion[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    setVersions(updated)
-  }, [])
+  }, [storageKey])
 
   const saveVersion = useCallback((latex: string, title: string, label: string) => {
+    if (!storageKey) return ''
     const version: ResumeVersion = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      id: generateId(),
       title,
       latex,
       timestamp: Date.now(),
@@ -42,27 +46,29 @@ export function useResumeVersions() {
     }
     setVersions(prev => {
       const updated = [version, ...prev].slice(0, MAX_VERSIONS)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+      localStorage.setItem(storageKey, JSON.stringify(updated))
       return updated
     })
     return version.id
-  }, [])
+  }, [storageKey])
 
   const deleteVersion = useCallback((id: string) => {
+    if (!storageKey) return
     setVersions(prev => {
       const updated = prev.filter(v => v.id !== id)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+      localStorage.setItem(storageKey, JSON.stringify(updated))
       return updated
     })
-  }, [])
+  }, [storageKey])
 
   const updateLabel = useCallback((id: string, label: string) => {
+    if (!storageKey) return
     setVersions(prev => {
       const updated = prev.map(v => v.id === id ? { ...v, label } : v)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+      localStorage.setItem(storageKey, JSON.stringify(updated))
       return updated
     })
-  }, [])
+  }, [storageKey])
 
   return { versions, saveVersion, deleteVersion, updateLabel }
 }

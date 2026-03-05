@@ -4,8 +4,6 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { fetchWithKey } from '@/lib/fetch'
 import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 
-const CHAT_STORAGE_KEY = 'resulyze-chat-history'
-
 export interface ChangeItem {
   before: string
   after: string
@@ -26,39 +24,48 @@ interface UseChatLatexOptions {
   latexSource: string
   jobData: any | null
   onApplyChanges: (newLatex: string) => void
+  resumeId: string | null
 }
 
-function loadMessages(): ChatMessage[] {
+function loadMessages(storageKey: string | null): ChatMessage[] {
+  if (!storageKey) return []
   try {
-    const saved = localStorage.getItem(CHAT_STORAGE_KEY)
+    const saved = localStorage.getItem(storageKey)
     if (saved) return JSON.parse(saved)
   } catch {
-    localStorage.removeItem(CHAT_STORAGE_KEY)
+    if (storageKey) localStorage.removeItem(storageKey)
   }
   return []
 }
 
-export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLatexOptions) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (typeof window !== 'undefined') return loadMessages()
-    return []
-  })
+export function useChatLatex({ latexSource, jobData, onApplyChanges, resumeId }: UseChatLatexOptions) {
+  const chatStorageKey = resumeId ? `resulyze-chat-${resumeId}` : null
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [builderMode, setBuilderMode] = useState(false)
   const latexRef = useRef(latexSource)
   latexRef.current = latexSource
 
+  // Reload messages when resumeId changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setMessages(loadMessages(chatStorageKey))
+      setBuilderMode(false)
+      setError(null)
+    }
+  }, [chatStorageKey])
+
   // Persist messages to localStorage
   useEffect(() => {
+    if (!chatStorageKey) return
     if (messages.length > 0) {
-      // Only persist text content, not proposed latex (saves space)
       const toSave = messages.map(({ proposedLatex, ...rest }) => rest)
-      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave))
+      localStorage.setItem(chatStorageKey, JSON.stringify(toSave))
     } else {
-      localStorage.removeItem(CHAT_STORAGE_KEY)
+      localStorage.removeItem(chatStorageKey)
     }
-  }, [messages])
+  }, [messages, chatStorageKey])
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return
@@ -127,11 +134,9 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
       if (!msg?.changes?.[changeIndex]) return prev
 
       const change = msg.changes[changeIndex]
-      if (change.status) return prev // already resolved
+      if (change.status) return prev
 
       const currentLatex = latexRef.current
-
-      // Try exact string replacement first (works for single-line snippets)
       const replaced = currentLatex.replace(change.before, change.after)
       const replacementWorked = replaced !== currentLatex
 
@@ -143,7 +148,6 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
           jobTitle: jobData?.jobTitle,
           changes: [msg.content.slice(0, 300)],
         })
-        // Mark only this change as applied
         return prev.map(m => {
           if (m.id !== messageId) return m
           const updatedChanges = m.changes!.map((c, i) =>
@@ -159,7 +163,6 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
         })
       }
 
-      // Replacement failed (abbreviated snippet didn't match) — fall back to proposedLatex
       if (msg.proposedLatex) {
         onApplyChanges(msg.proposedLatex)
         trackAnalyticsEvent('optimization_applied', {
@@ -168,7 +171,6 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
           jobTitle: jobData?.jobTitle,
           changes: [msg.content.slice(0, 300)],
         })
-        // Mark ALL pending changes as applied since proposedLatex contains all of them
         return prev.map(m => {
           if (m.id !== messageId) return m
           return {
@@ -179,7 +181,6 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
         })
       }
 
-      // No proposedLatex either — just mark as applied (UI feedback) without source change
       return prev.map(m => {
         if (m.id !== messageId) return m
         const updatedChanges = m.changes!.map((c, i) =>
@@ -217,11 +218,9 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
       const msg = prev.find(m => m.id === messageId)
       if (!msg?.changes) return prev
 
-      // Prefer proposedLatex (authoritative full source) over sequential snippet replacements
       if (msg.proposedLatex) {
         onApplyChanges(msg.proposedLatex)
       } else {
-        // Fall back to sequential string replacements (may partially fail for multi-line changes)
         let currentLatex = latexRef.current
         for (const change of msg.changes) {
           if (!change.status) {
@@ -271,7 +270,6 @@ export function useChatLatex({ latexSource, jobData, onApplyChanges }: UseChatLa
     setMessages([])
     setError(null)
     setBuilderMode(true)
-    // Send initial builder prompt
     const initMessage: ChatMessage = {
       id: 'msg-' + Date.now() + '-assistant',
       role: 'assistant',

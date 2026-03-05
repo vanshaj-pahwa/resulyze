@@ -3,13 +3,16 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_LATEX_SOURCE } from './defaultTemplate'
-import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List, Pilcrow, Hash, LayoutTemplate } from 'lucide-react'
+import { FileText, Sparkles, Loader2, X, Undo2, CheckCircle2, Clock, MessageSquare, Search, FileSearch, List, Pilcrow, Hash, ChevronDown, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { fetchWithKey } from '@/lib/fetch'
 import { useChatLatex } from '@/hooks/useChatLatex'
 import { trackAnalyticsEvent } from '@/hooks/useAnalytics'
 import { useResumeVersions } from '@/hooks/useResumeVersions'
+import { useResumeManagerContext } from '@/contexts/ResumeManagerContext'
+import { formatRelativeTime } from '@/lib/utils'
 import { useResumeReview } from '@/hooks/useResumeReview'
 import { useAtsScore } from '@/hooks/useAtsScore'
 import { ShortcutsDialog } from '@/components/ui/shortcuts-dialog'
@@ -24,16 +27,12 @@ const ResumeReviewPanel = dynamic(() => import('./ResumeReviewPanel'), { ssr: fa
 const OverflowBanner = dynamic(() => import('./OverflowBanner'), { ssr: false })
 const OutlinePanel = dynamic(() => import('./OutlinePanel'), { ssr: false })
 const AtsScorePanel = dynamic(() => import('./AtsScorePanel'), { ssr: false })
-const TemplatePickerModal = dynamic(() => import('./TemplatePickerModal'), { ssr: false })
 const TrimReviewPanel = dynamic(() => import('./TrimReviewPanel'), { ssr: false })
 
 interface LatexEditorProps {
   readonly jobData: any
   readonly onResumeDataChange: (data: any) => void
 }
-
-const STORAGE_KEY = 'resulyze-latex-source'
-const TITLE_STORAGE_KEY = 'resulyze-resume-title'
 
 // ─── Section helpers for Go-to-Section palette ───────────────────────────────
 
@@ -59,8 +58,11 @@ function parseLatexSections(latex: string): LatexSection[] {
 }
 
 export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditorProps) {
+  const resumeManager = useResumeManagerContext()
+  const router = useRouter()
   const [latexSource, setLatexSource] = useState<string>(DEFAULT_LATEX_SOURCE)
   const [resumeTitle, setResumeTitle] = useState<string>('')
+  const [showResumeSwitcher, setShowResumeSwitcher] = useState(false)
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [isCompiling, setIsCompiling] = useState(false)
   const [compilationError, setCompilationError] = useState<string | null>(null)
@@ -83,7 +85,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const [pendingCompile, setPendingCompile] = useState(false)
 
   // Version history
-  const { versions, saveVersion, deleteVersion, updateLabel } = useResumeVersions()
+  const { versions, saveVersion, deleteVersion, updateLabel } = useResumeVersions(resumeManager.activeResumeId)
   const [showHistory, setShowHistory] = useState(false)
 
   // Review state
@@ -99,12 +101,6 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   // Outline panel state
   const [showOutline, setShowOutline] = useState(false)
   const [navigateLine, setNavigateLine] = useState(0)
-
-  // Template picker
-  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
-  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false)
-  // Cache parsed resume data keyed by latexSource — avoids re-parsing on repeated template switches
-  const parsedResumeCache = useRef<{ source: string; data: any } | null>(null)
 
   // Editor visual features
   const [showWhitespace, setShowWhitespace] = useState(false)
@@ -133,6 +129,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
   const chat = useChatLatex({
     latexSource,
     jobData,
+    resumeId: resumeManager.activeResumeId,
     onApplyChanges: useCallback((newLatex: string) => {
       saveVersion(latexSource, resumeTitle, 'Pre-chat edit')
       setPreviousLatex(latexSource)
@@ -142,48 +139,44 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     }, [latexSource, resumeTitle, saveVersion]),
   })
 
-  // Load persisted state client-side after hydration (avoids SSR/client mismatch)
+  // Load from active resume when it changes
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) setLatexSource(saved)
-    const savedTitle = localStorage.getItem(TITLE_STORAGE_KEY)
-    if (savedTitle) {
-      setResumeTitle(savedTitle)
-      userEditedTitle.current = true
+    if (!resumeManager.mounted) return
+    if (resumeManager.activeResume) {
+      setLatexSource(resumeManager.activeResume.latexSource)
+      setResumeTitle(resumeManager.activeResume.title)
+      userEditedTitle.current = !!resumeManager.activeResume.title
+    } else {
+      setLatexSource(DEFAULT_LATEX_SOURCE)
+      setResumeTitle('')
+      userEditedTitle.current = false
     }
     setPendingCompile(true)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeManager.activeResumeId, resumeManager.mounted])
 
-  // Auto-save to localStorage (only when user has modified from default)
+  // Auto-save latex to resumeManager
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (latexSource !== DEFAULT_LATEX_SOURCE) {
-        localStorage.setItem(STORAGE_KEY, latexSource)
-      } else {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }, 500)
-    return () => clearTimeout(timeout)
+    if (!resumeManager.mounted || !resumeManager.activeResumeId) return
+    resumeManager.updateLatex(latexSource)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latexSource])
 
-  // Persist resume title
+  // Persist resume title to resumeManager
   useEffect(() => {
-    if (resumeTitle) {
-      localStorage.setItem(TITLE_STORAGE_KEY, resumeTitle)
-    } else {
-      localStorage.removeItem(TITLE_STORAGE_KEY)
-    }
+    if (!resumeManager.mounted || !resumeManager.activeResumeId) return
+    resumeManager.renameResume(resumeManager.activeResumeId, resumeTitle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeTitle])
 
   // Auto-generate title on mount when title is empty and resume is custom
   useEffect(() => {
     if (userEditedTitle.current) return
 
-    const savedTitle = localStorage.getItem(TITLE_STORAGE_KEY)
-    if (savedTitle) return
+    if (resumeManager.activeResume?.title) return
 
-    const savedLatex = localStorage.getItem(STORAGE_KEY)
-    if (!savedLatex) return // still on default template
+    const currentLatex = resumeManager.activeResume?.latexSource
+    if (!currentLatex || currentLatex === DEFAULT_LATEX_SOURCE) return
 
     setIsGeneratingTitle(true)
 
@@ -191,7 +184,7 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
     fetchWithKey('/api/generate-resume-title', {
       method: 'POST',
-      body: JSON.stringify({ latexSource: savedLatex }),
+      body: JSON.stringify({ latexSource: currentLatex }),
     })
       .then(res => res.json())
       .then(data => {
@@ -337,48 +330,6 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
     setPendingCompile(true)
     setShowHistory(false)
     toast.success('Version restored')
-  }, [latexSource, resumeTitle, saveVersion])
-
-  const handleApplyTemplate = useCallback(async (template: import('@/lib/templates').ResumeTemplate) => {
-    setIsApplyingTemplate(true)
-    setShowTemplatePicker(false)
-
-    try {
-      let parsedData: any
-
-      // Use cached parse result if latexSource hasn't changed since last parse
-      if (parsedResumeCache.current?.source === latexSource) {
-        parsedData = parsedResumeCache.current.data
-      } else {
-        const res = await fetchWithKey('/api/parse-resume-latex', {
-          method: 'POST',
-          body: JSON.stringify({ latexSource }),
-        })
-
-        const json = await res.json()
-
-        if (!res.ok) {
-          throw new Error(json.error || 'Failed to parse resume')
-        }
-
-        parsedData = json.data
-        // Cache for subsequent template switches with the same source
-        parsedResumeCache.current = { source: latexSource, data: parsedData }
-      }
-
-      // Build the target template instantly on the client from the structured data
-      const { buildFromAIData } = await import('@/lib/templates/converter')
-      saveVersion(latexSource, resumeTitle, `Pre-template: ${template.name}`)
-      const converted = buildFromAIData(parsedData, template.id)
-      setLatexSource(converted)
-      setPendingCompile(true)
-      toast.success(`Switched to "${template.name}" — your content was preserved`)
-      trackAnalyticsEvent('resume_created', { template: template.name })
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to switch template. Please try again.')
-    } finally {
-      setIsApplyingTemplate(false)
-    }
   }, [latexSource, resumeTitle, saveVersion])
 
   // Show LaTeX hint on mount if not dismissed
@@ -561,8 +512,8 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
           {/* Toolbar — above code editor only */}
           <div className="h-10 bg-zinc-50 dark:bg-latex-toolbar flex items-center px-2.5 gap-2 border-b border-zinc-200 dark:border-latex-border shrink-0">
-            {/* Left: document title */}
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {/* Left: resume title + switcher */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 relative">
               <FileText className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
               <div className="relative flex-1 min-w-0">
                 <input
@@ -586,18 +537,66 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
                   </span>
                 )}
               </div>
-              {resumeTitle && !isGeneratingTitle && (
+              {resumeManager.resumes.length > 0 && (
                 <button
-                  onClick={() => {
-                    userEditedTitle.current = true
-                    setResumeTitle('')
-                    localStorage.removeItem(TITLE_STORAGE_KEY)
-                  }}
-                  className="p-0.5 rounded text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 transition-colors shrink-0"
-                  title="Clear title"
+                  onClick={() => setShowResumeSwitcher(prev => !prev)}
+                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors shrink-0"
+                  title="Switch resume"
                 >
-                  <X className="w-3 h-3" />
+                  <ChevronDown className="w-3.5 h-3.5" />
                 </button>
+              )}
+
+              {/* Resume switcher dropdown */}
+              {showResumeSwitcher && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowResumeSwitcher(false)} />
+                  <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+                    <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">My Resumes</span>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {resumeManager.resumes.map(r => (
+                        <button
+                          key={r.id}
+                          onClick={() => {
+                            resumeManager.switchResume(r.id)
+                            setShowResumeSwitcher(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
+                            r.id === resumeManager.activeResumeId
+                              ? 'bg-zinc-50 dark:bg-zinc-800/60'
+                              : ''
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-medium text-zinc-700 dark:text-zinc-200 truncate">
+                              {r.title || 'Untitled Resume'}
+                            </div>
+                            <div className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                              {formatRelativeTime(r.updatedAt)}
+                            </div>
+                          </div>
+                          {r.id === resumeManager.activeResumeId && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="border-t border-zinc-100 dark:border-zinc-800">
+                      <button
+                        onClick={() => {
+                          setShowResumeSwitcher(false)
+                          router.push('/dashboard')
+                        }}
+                        className="w-full text-left px-3 py-2 flex items-center gap-2 text-[11px] font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Resume
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
@@ -676,30 +675,6 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
 
               {/* Group divider */}
               <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 mx-0.5 shrink-0" />
-
-              {/* Templates */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => !isApplyingTemplate && setShowTemplatePicker(true)}
-                      disabled={isApplyingTemplate}
-                      className={`flex items-center gap-1.5 rounded-md text-[11px] font-medium transition-all duration-150 whitespace-nowrap
-                        ${isChatOpen || showReview ? 'px-1.5 py-1' : 'px-2 py-1'}
-                        ${isApplyingTemplate
-                          ? 'text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
-                          : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-white/[0.08]'}
-                      `}
-                    >
-                      {isApplyingTemplate
-                        ? <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
-                        : <LayoutTemplate className="w-3.5 h-3.5 shrink-0" />}
-                      {!(isChatOpen || showReview) && <span>{isApplyingTemplate ? 'Applying…' : 'Templates'}</span>}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{isApplyingTemplate ? 'Converting template…' : 'Choose a resume template'}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
 
               {/* History */}
               <TooltipProvider>
@@ -1070,15 +1045,6 @@ export default function LatexEditor({ jobData, onResumeDataChange }: LatexEditor
             )}
           </div>
         </div>
-      )}
-
-      {/* Template picker modal */}
-      {showTemplatePicker && (
-        <TemplatePickerModal
-          currentSource={latexSource}
-          onApply={handleApplyTemplate}
-          onClose={() => setShowTemplatePicker(false)}
-        />
       )}
 
     </div>

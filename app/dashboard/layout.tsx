@@ -7,6 +7,7 @@ import ConnectionStatus from '@/components/ui/connection-status'
 import { StepsGuide } from '@/components/ui/steps-guide'
 import { useApiKey } from '@/hooks/useApiKey'
 import { ApiKeyDialog } from '@/components/ui/api-key-dialog'
+import { ResumeManagerProvider } from '@/contexts/ResumeManagerContext'
 
 const TABS = [
   { id: 'home', path: '/dashboard', shortTitle: 'Home', icon: LayoutDashboard },
@@ -34,6 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <ResumeManagerProvider>
     <div>
       <ConnectionStatus />
 
@@ -82,5 +84,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </main>
     </div>
+    </ResumeManagerProvider>
   )
 }
