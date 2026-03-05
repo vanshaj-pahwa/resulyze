@@ -79,7 +79,8 @@ export default function PreviewPanel({ pdfUrl, isCompiling, error, onCompile, on
       if (cancelled || rendering) return
       rendering = true
 
-      const width = container!.clientWidth
+      const cs = getComputedStyle(container!)
+      const width = container!.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
       if (width === 0) { rendering = false; return }
 
       const wrappers = container!.querySelectorAll('[data-page-wrapper]')
