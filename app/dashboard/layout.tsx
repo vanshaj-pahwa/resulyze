@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FileText, Code2, PenSquare, Zap } from 'lucide-react'
+import Link from 'next/link'
+import { LayoutDashboard, FileText, Code2, PenSquare, Zap, Github } from 'lucide-react'
 import ConnectionStatus from '@/components/ui/connection-status'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { StepsGuide } from '@/components/ui/steps-guide'
 import { useApiKey } from '@/hooks/useApiKey'
 import { ApiKeyDialog } from '@/components/ui/api-key-dialog'
 import { ResumeManagerProvider } from '@/contexts/ResumeManagerContext'
 
 const TABS = [
-  { id: 'home', path: '/dashboard', shortTitle: 'Home', icon: LayoutDashboard },
-  { id: 'job-analysis', path: '/dashboard/job-analysis', shortTitle: 'Job Analysis', icon: FileText },
-  { id: 'resume', path: '/dashboard/resume', shortTitle: 'Resume', icon: Code2 },
-  { id: 'cover-letter', path: '/dashboard/cover-letter', shortTitle: 'Cover Letter', icon: PenSquare },
-  { id: 'interview-prep', path: '/dashboard/interview-prep', shortTitle: 'Interview', icon: Zap },
+  { id: 'home', path: '/dashboard', label: 'Home', icon: LayoutDashboard },
+  { id: 'job-analysis', path: '/dashboard/job-analysis', label: 'Job Analysis', icon: FileText },
+  { id: 'resume', path: '/dashboard/resume', label: 'Resume', icon: Code2 },
+  { id: 'cover-letter', path: '/dashboard/cover-letter', label: 'Cover Letter', icon: PenSquare },
+  { id: 'interview-prep', path: '/dashboard/interview-prep', label: 'Interview', icon: Zap },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ResumeManagerProvider>
-    <div>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <ConnectionStatus />
 
       <ApiKeyDialog
@@ -45,11 +47,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         dismissible={isKeySet}
       />
 
-      <main className="px-4 sm:px-6 lg:px-8 py-4 max-w-[1800px] mx-auto">
-        {/* Tab Navigation */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center overflow-x-auto no-scrollbar gap-1 border-b border-zinc-200 dark:border-zinc-800 -mb-px">
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800/80">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-12">
+            {/* Logo */}
+            <Link
+              href="/"
+              className="font-heading font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100 hover:opacity-70 transition-opacity"
+            >
+              Resulyze
+            </Link>
+
+            {/* Tabs — center */}
+            <nav className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
               {TABS.map((tab) => {
                 const active = isActive(tab)
                 const Icon = tab.icon
@@ -59,26 +70,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     key={tab.id}
                     type="button"
                     onClick={() => router.push(tab.path)}
-                    title={tab.shortTitle}
+                    title={tab.label}
                     className={`
-                      flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors duration-150 cursor-pointer
+                      relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-all duration-150 cursor-pointer
                       ${active
-                        ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100'
-                        : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                        ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
                       }
                     `}
                   >
                     <Icon className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{tab.shortTitle}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 )
               })}
+            </nav>
+
+            {/* Right side */}
+            <div className="flex items-center gap-1">
+              <a
+                href="https://github.com/vanshaj-pahwa/resulyze"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+              >
+                <Github className="w-3.5 h-3.5" />
+              </a>
+              <ThemeToggle />
+              <StepsGuide />
             </div>
-            <StepsGuide />
           </div>
         </div>
+      </header>
 
-        {/* Content */}
+      {/* ── Content ──────────────────────────────────────────────────────── */}
+      <main className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="step-content-enter">
           {children}
         </div>

@@ -1,8 +1,13 @@
+'use client'
+
 import React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Github } from "lucide-react"
 
 export default function Footer() {
+  const pathname = usePathname()
+
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800">
       <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-[1800px] mx-auto">

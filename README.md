@@ -38,7 +38,10 @@ Everything runs in your browser. Bring your own Gemini API key.
 
 | Feature | What it does |
 |---------|-------------|
+| **Template Gallery** | 8 professional LaTeX templates (Modern, Classic, Minimal, Sidebar, Developer, Professional, Bold, Compact) with real compiled PDF previews on the dashboard |
+| **Multi-Resume Management** | Create and manage multiple resumes, each with its own version history and chat history. Resume switcher in the editor toolbar |
 | **Resume Review** | Scores your resume 0-100 with a letter grade. Section-by-section breakdown of ATS compliance, content quality, and skill match against the job description |
+| **ATS Compatibility Score** | Analyzes the compiled PDF via Gemini multimodal, exactly what ATS bots see. Keyword density, formatting, section completeness, and parsability scoring |
 | **Weak Bullet Detection** | Flags vague or unquantified bullets and suggests specific AI rewrites with metrics and strong action verbs |
 | **Skill Match Panel** | Shows your match percentage against the analyzed job description with color-coded matched and missing skills |
 | **AI Chat Assistant** | Chat to rewrite, optimize, and tailor your resume. Intent-aware: understands "too long", "add keywords", "fix verbs", and more |
@@ -46,10 +49,11 @@ Everything runs in your browser. Bring your own Gemini API key.
 | **Live PDF Preview** | High-fidelity canvas rendering with zoom, retina support, clickable link annotations, and responsive resizing |
 | **Resume Versioning** | Every AI edit is auto-saved with a timestamp. Restore any version in one click |
 | **Page Overflow Detection** | Detects when your resume exceeds one page and suggests AI-powered trims to fit |
-| **Editor Intelligence** | LaTeX autocomplete, real-time linting with inline diagnostics, document outline panel, and diff gutter showing changed lines |
+| **Editor Intelligence** | LaTeX autocomplete, real-time linting, document outline, indent guides, Go to Section palette, diff gutter, and smart editing shortcuts |
+| **Analytics Dashboard** | Skill cloud across analyzed JDs, optimization timeline, activity feed, and quick action cards with usage stats |
 | **JD History** | Last 5 analyzed job descriptions are saved. Preview, delete, or switch between them |
 | **Code Search** | Find and replace across your LaTeX source with case, regex, and whole-word filter support |
-| **Keyboard Shortcuts** | `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat |
+| **Keyboard Shortcuts** | `Ctrl+Enter` to compile, `Ctrl+Shift+L` to toggle AI chat, `Ctrl+Shift+O` for Go to Section |
 | **Persistent State** | Resume, job data, chat history, and preferences all survive page refreshes via localStorage |
 | **PDF and Text Export** | Download resumes and cover letters as PDF or plain text |
 | **Mobile Responsive** | Full access on mobile: editor, review panel, and chat open as a bottom sheet overlay |

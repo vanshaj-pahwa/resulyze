@@ -1,26 +1,29 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import CoverLetterGenerator from '@/components/cover-letter/CoverLetterGenerator'
 import { useJobData } from '@/hooks/useJobData'
 
 export default function CoverLetterPage() {
   const { jobData } = useJobData()
 
-  // Resume data is read from localStorage directly by the cover letter generator
   const resumeData = typeof window !== 'undefined'
     ? { latexSource: localStorage.getItem('resulyze-latex-source') || '' }
     : null
 
   return (
-    <Card>
-      <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
-        <CardTitle className="!text-xl">Cover Letter & Referrals</CardTitle>
-        <CardDescription>Generate personalized cover letters and referral messages</CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
+    <div>
+      <div className="mb-6">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          Cover Letter & Referrals
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          Generate personalized cover letters and referral messages.
+        </p>
+      </div>
+
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
         <CoverLetterGenerator jobData={jobData} resumeData={resumeData} />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

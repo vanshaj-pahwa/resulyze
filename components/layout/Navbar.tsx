@@ -18,6 +18,9 @@ export default function Navbar() {
     setHasResume(!!localStorage.getItem('resulyze-latex-source'))
   }, [])
 
+  // Dashboard has its own header
+  if (isDashboard) return null
+
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
       <div className="px-4 sm:px-6 lg:px-8 max-w-[1800px] mx-auto">
